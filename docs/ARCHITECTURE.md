@@ -47,15 +47,20 @@ pools use mock ERC-20 tokens so price moves are reproducible; the executor accep
 ## Order lifecycle
 
 1. **Create** (destination chain). User calls `ReflexExecutor.createOrder`. The executor
-   pulls `amountIn` of the input token into escrow and emits `OrderCreated` with the
-   trigger parameters.
+   accepts only owner-allowlisted, hookless execution pools, enforces their minimum
+   input size, and requires an allowlisted trigger pool. It pulls `amountIn` into escrow
+   and emits `OrderCreated` with the trigger parameters.
 2. **Mirror** (Reactive). `react()` receives `OrderCreated`, checks the trigger pool is
-   registered, and stores the order under that pool. Unregistered pools emit
-   `OrderRejected`; the owner can cancel and get a refund on the executor.
+   registered, rejects already-expired orders, and stores the order under that pool.
+   Each owner may occupy four of its 32 slots. Creation evicts that owner's expired
+   mirrors before checking the owner cap; if still full, the pool evicts at most one other
+   expired mirror. Each eviction emits `OrderEvicted` before `OrderClosed`.
+   Rejected orders remain refundable on the executor.
 3. **Evaluate** (Reactive). Every `Swap` log of a registered pool carries the new `tick`.
    `react()` walks the pool's active orders, updates trailing peaks, and fires any order
    whose condition holds. A fired order becomes `Pending` and the contract emits
-   `OrderTriggered` (latency stage 2).
+   `OrderTriggered` (latency stage 2). Pending callbacks time out after 120 seconds,
+   consuming a retry. Rearmed orders wait until ten seconds after their last attempt.
 4. **Execute** (destination chain). The callback proxy calls
    `ReflexExecutor.execute(rvm, orderId, trace)`. The executor checks both callback
    guards, expiry and status, swaps through `PoolManager.unlock`, enforces
@@ -63,7 +68,15 @@ pools use mock ERC-20 tokens so price moves are reproducible; the executor accep
    (latency stage 3). A failed swap does not revert the callback: it emits
    `OrderExecutionFailed` and keeps the escrow.
 5. **Settle** (Reactive). `OrderExecuted` removes the order. `OrderExecutionFailed`
-   re-arms it, up to `MAX_RETRIES`. `OrderCancelled` removes it in any state.
+   re-arms it only when its trace matches the current pending attempt, up to `MAX_RETRIES`.
+   Stale or malformed failure reports are ignored. Exhausted failures or timeouts emit `OrderExhausted`
+   before `OrderClosed`, prompting the owner to cancel and recover escrow on the executor.
+   `OrderCancelled` removes the mirror in any state.
+
+Owners can rotate subscriptions with `replaceExecutor`. Existing mirrors remain, but
+old-executor logs are no longer observed: cancel those orders on the old executor and
+remove their mirrors with owner-only `dropOrder` before accepting replacement orders
+with overlapping IDs.
 
 Cross-chain orders are the same flow with `triggerChainId != executor chain`: the price
 on Unichain Sepolia can fire a sale on Base Sepolia, and the other way round.
@@ -116,12 +129,22 @@ log over WebSocket. The report shows both and states which is which.
 ## Security
 
 - `react()` is `onlySystem`; it also checks that executor logs come from the registered
-  executor address for that chain.
+  executor address for that chain. Malformed Swap and OrderCreated payloads are ignored,
+  including wrong lengths and non-canonical ABI values.
 - `execute()` uses both `onlyServiceProvider` (the chain's callback proxy) and
   `onlyCallbackSender(rvm)` (our reactive contract).
 - Only owner-registered trigger pools are subscribed to, which bounds the gas the
   reactive contract can be made to spend. Each pool holds at most `MAX_ORDERS_PER_POOL`
-  active orders.
+  tracked orders, with at most four per owner (from OrderCreated's indexed owner).
+  Creation evicts the incoming owner's expired mirrors; a full pool evicts at most one
+  additional expired mirror. Each Swap fires at
+  most eight orders; remaining orders still update trailing peaks and can fire on later Swaps.
+- Executor owners allowlist hookless execution pools with minimum input amounts and
+  trigger pools by chain. Removing an allowance blocks new orders only; existing orders
+  retain execution, cancellation and expiry refunds. Swap-failure event reasons are
+  capped at 256 bytes.
+- Pending callbacks time out after 120 seconds; both timeouts and reported failures
+  consume the same retry budget, with a ten-second cooldown measured from the last attempt.
 - Escrowed funds only leave the executor to the order owner: as swap output, or as a
   refund on cancel or expiry.
 - Timers use `block.timestamp`, never block counts (Base Sepolia runs 200 ms blocks).
@@ -129,7 +152,15 @@ log over WebSocket. The report shows both and states which is which.
 ## Funding
 
 - `ReflexReactive` pays for reactive transactions in REACT (Lasna faucet).
-- Each `ReflexExecutor` pays for its callbacks in the destination chain's ETH.
+- Each order deposits the executor's owner-configured `executionFee` in ETH (default zero).
+  The first callback reaching an Open order consumes it, including failed or expired attempts;
+  later retries are sponsor-paid. Cancellation or expiry reclaim returns tokens immediately
+  and schedules a separate ETH refund after 180 seconds. Anyone may call `claimFeeRefund`
+  to pay the owner; failed claims never affect returned tokens. An unclaimed deposit is
+  forfeited if a callback reaches the cancelled order, including during the refund delay.
+- Unconsumed deposits are tracked in `reservedFees`. Owners may withdraw only surplus ETH;
+  sponsor top-ups remain supported. Proxy charges use the full balance, so the operator must
+  keep balance at least `reservedFees` to preserve refunds.
 - Both expose `coverDebt()` so they can be restarted after running dry.
 
 ## Deployment order

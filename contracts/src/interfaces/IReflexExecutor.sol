@@ -31,8 +31,8 @@ interface IReflexExecutor {
     error OrderNotOpen(uint64 orderId);
     error OrderNotExpired(uint64 orderId);
 
-    /// @notice Escrows `params.amountIn` of the input token and opens an order.
-    function createOrder(OrderParams calldata params) external returns (uint64 orderId);
+    /// @notice Escrows input tokens and the configured ETH execution-fee deposit, opening an order.
+    function createOrder(OrderParams calldata params) external payable returns (uint64 orderId);
 
     /// @notice Cancels an open order and refunds the escrow to its owner.
     function cancelOrder(uint64 orderId) external;

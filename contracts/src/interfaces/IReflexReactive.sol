@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import { ExecutionTrace } from "./ReflexTypes.sol";
+import {ExecutionTrace} from "./ReflexTypes.sol";
 
 /// @title Reactive Network side of Reflex: order mirror, trigger logic and callbacks.
 interface IReflexReactive {
     enum RejectReason {
         UnknownPool,
         PoolFull,
-        InvalidTrigger
+        InvalidTrigger,
+        OwnerCapReached,
+        Expired
     }
+
+    event ExecutorReplaced(uint256 indexed chainId, address oldExecutor, address newExecutor);
+    event OrderEvicted(uint256 indexed execChainId, uint64 indexed orderId);
 
     event ExecutorRegistered(uint256 indexed chainId, address executor);
     event PoolRegistered(uint256 indexed chainId, bytes32 indexed poolId, address poolManager);
@@ -24,14 +29,24 @@ interface IReflexReactive {
     /// @notice A failed execution put the order back in play.
     event OrderRearmed(uint256 indexed execChainId, uint64 indexed orderId, uint8 retries);
 
+    /// @notice Retry budget was exhausted; the owner can cancel on the executor to recover escrow.
+    event OrderExhausted(uint256 indexed execChainId, uint64 indexed orderId);
+
     /// @notice The order left the book: executed, cancelled, or out of retries.
     event OrderClosed(uint256 indexed execChainId, uint64 indexed orderId);
 
+    error ExecutorNotRegistered(uint256 chainId);
     error ExecutorAlreadyRegistered(uint256 chainId);
     error PoolAlreadyRegistered(uint256 chainId, bytes32 poolId);
 
     /// @notice Subscribes to the executor's order events on `chainId`.
     function registerExecutor(uint256 chainId, address executor) external;
+
+    /// @notice Replaces a chain's executor subscriptions; cancel old orders there and drop their mirrors.
+    function replaceExecutor(uint256 chainId, address newExecutor) external;
+
+    /// @notice Removes a tracked mirror, including stale orders from a replaced executor.
+    function dropOrder(uint256 execChainId, uint64 orderId) external;
 
     /// @notice Subscribes to Swap logs of one Uniswap v4 pool.
     function registerPool(uint256 chainId, address poolManager, bytes32 poolId) external;

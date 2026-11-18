@@ -10,3 +10,13 @@ contracts/broadcast/*/31337/
 node_modules/
 .next/
 .DS_Store
+
+# Local agent tooling output
+graphify-out/
+.codex/
+
+# Local agent/tooling config
+AGENTS.md
+CLAUDE.md
+.graphifyignore
+.claude/
