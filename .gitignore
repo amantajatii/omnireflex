@@ -1,0 +1,12 @@
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+# Env
+.env
+.env.*
+!.env.example
+# Node
+node_modules/
+.next/
+.DS_Store
