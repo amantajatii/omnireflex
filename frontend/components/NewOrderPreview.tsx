@@ -1,9 +1,12 @@
+'use client';
 import Link from 'next/link';
 import { formatEther } from 'viem';
-import { formatAmount, formatNumber, formatPrice } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { chains, type DestinationId } from '@/lib/chains';
 import type { OrderParams } from '@/lib/order-encoding';
 import styles from './NewOrder.module.css';
+import { useMarket } from '@/lib/use-market';
+import NewOrderChart from './NewOrderChart';
 
 type Props = {
   params?: OrderParams;
@@ -22,15 +25,14 @@ type Props = {
   watching: boolean;
 };
 export default function NewOrderPreview(p: Props) {
-  const prices = [
-    p.spot,
-    ...(p.kind === 'trail' && p.spot ? [p.spot * (1 - Number(p.trail) / 100)] : []),
-    ...(['stop', 'bracket'].includes(p.kind) ? [Number(p.lower)] : []),
-    ...(['take', 'bracket'].includes(p.kind) ? [Number(p.upper)] : []),
-  ].filter((n): n is number => !!n && Number.isFinite(n));
-  const low = Math.min(...prices) * 0.99,
-    high = Math.max(...prices) * 1.01;
-  const y = (price: number) => 125 - ((price - low) / (high - low)) * 90;
+  const { market, error } = useMarket(p.trigger);
+  const levels = [
+    ...(['stop', 'bracket'].includes(p.kind) ? [{ label: 'Stop', price: Number(p.lower) }] : []),
+    ...(['take', 'bracket'].includes(p.kind) ? [{ label: 'Take', price: Number(p.upper) }] : []),
+    ...(p.kind === 'trail' && p.spot
+      ? [{ label: 'Trail stop', price: p.spot * (1 - Number(p.trail) / 100) }]
+      : []),
+  ];
   const input = p.side === 'eth' ? 'rdETH' : 'rdUSD';
   return (
     <aside className={`panel ${styles.preview}`} aria-label="Order preview">
@@ -51,24 +53,15 @@ export default function NewOrderPreview(p: Props) {
           'Set an amount and trigger to preview your order.'
         )}
       </p>
-      {prices.length > 0 && (
-        <svg viewBox="0 0 300 160" role="img" aria-label="Spot and configured trigger prices">
-          <path d="M10 140H290" stroke="var(--rx-line)" />
-          {prices.map((price, i) => (
-            <g key={i}>
-              <path
-                d={`M10 ${y(price)}H290`}
-                stroke="var(--rx-ink)"
-                strokeDasharray={i ? '4 4' : undefined}
-                opacity={i ? 0.45 : 1}
-              />
-              <text x="12" y={y(price) - 6} fill="var(--rx-soft)" fontSize="10">
-                {i === 0 ? 'Spot' : 'Trigger'} · {formatPrice(price)}
-              </text>
-            </g>
-          ))}
-        </svg>
-      )}
+      <div>
+        <NewOrderChart
+          points={market?.points ?? []}
+          spot={p.spot}
+          levels={levels}
+          chainName={chains[p.trigger].name}
+        />
+        {(error || market?.error) && <p role="status">{error || market?.error}</p>}
+      </div>
       {p.params && (
         <details>
           <summary>Encoded values</summary>

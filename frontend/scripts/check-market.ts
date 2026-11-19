@@ -35,13 +35,13 @@ try {
     const snapshot = await marketCaches[id].get();
     assert.equal(snapshot.error, undefined);
     assert.deepEqual(snapshot.points, []);
-    assert.equal(ranges[id][0][0], id === 1301 ? 28001n : 10001n);
+    assert.equal(ranges[id][0][0], id === 1301 ? 24001n : 10001n);
     assert.equal(ranges[id].at(-1)?.[1], 30000n);
     const requests = ranges[id].length;
     await marketCaches[id].get();
     assert.equal(ranges[id].length, requests);
   }
-  assert.equal(ranges[1301].length, 2);
+  assert.equal(ranges[1301].length, 6);
   assert.equal(ranges[84532].length, 1);
   process.stdout.write(
     'PASS market pool-topic filters, bounded per-chain windows/spans and warm cache\n',

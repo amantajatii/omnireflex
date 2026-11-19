@@ -18,7 +18,7 @@ echo "› building frontend for https://$DOMAIN"
 
 echo "› staging"
 rm -rf "$STAGE"
-mkdir -p "$STAGE/frontend/app/.next" "$STAGE/indexer/records"
+mkdir -p "$STAGE/frontend/app/.next" "$STAGE/indexer/records" "$STAGE/pricebot/records"
 cp -R "$ROOT/frontend/.next/standalone/." "$STAGE/frontend/app/"
 cp -R "$ROOT/frontend/.next/static" "$STAGE/frontend/app/.next/static"
 if [ -d "$ROOT/frontend/public" ]; then cp -R "$ROOT/frontend/public" "$STAGE/frontend/app/public"; fi
@@ -31,7 +31,11 @@ cp "$ROOT/indexer/package.json" "$ROOT/indexer/package-lock.json" \
 cp -R "$ROOT/indexer/src" "$STAGE/indexer/src"
 for id in 1301 84532 5318007; do
   cp "$ROOT/contracts/deployments/$id.json" "$STAGE/indexer/records/"
+  cp "$ROOT/contracts/deployments/$id.json" "$STAGE/pricebot/records/"
 done
+cp "$ROOT/pricebot/package.json" "$ROOT/pricebot/package-lock.json" \
+  "$ROOT/pricebot/Dockerfile" "$ROOT/pricebot/.dockerignore" "$STAGE/pricebot/"
+cp -R "$ROOT/pricebot/src" "$STAGE/pricebot/src"
 cp "$ROOT/deploy/compose.yaml" "$STAGE/compose.yaml"
 
 echo "› syncing to $HOST:$REMOTE_DIR"

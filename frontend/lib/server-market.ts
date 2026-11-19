@@ -18,7 +18,7 @@ function marketCache(chainId: DestinationId) {
       const client = logClients[chainId],
         deployment = deployments[chainId];
       const head = await retry(() => client.getBlockNumber({ cacheTime: 0 }), chainId);
-      const window = chainId === 1301 ? 2000n : 20000n;
+      const window = chainId === 1301 ? 6000n : 20000n;
       const begin = head >= window - 1n ? head - window + 1n : 0n;
       const logs = [];
       for (let fromBlock = begin; fromBlock <= head; fromBlock += logSpan(chainId)) {

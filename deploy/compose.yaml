@@ -30,6 +30,24 @@ services:
         aliases: [reflex-indexer]
     logging: *logging
 
+  # Keeps the demo pools tracking real ETH/USD. Its key lives outside the synced
+  # directory (~/.omnireflex/pricebot.env) so rsync --delete never touches it.
+  pricebot:
+    build: ./pricebot
+    restart: unless-stopped
+    env_file:
+      - path: ../.omnireflex/pricebot.env
+        required: false
+    environment:
+      NODE_OPTIONS: --max-old-space-size=96
+    mem_limit: 128m
+    volumes:
+      - ./pricebot/records:/app/records:ro
+    networks:
+      edge:
+        aliases: [reflex-pricebot]
+    logging: *logging
+
 volumes:
   indexer-data:
 

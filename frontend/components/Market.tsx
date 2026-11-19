@@ -1,8 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { chains, destinationIds, type DestinationId } from '@/lib/chains';
 import { useFeed } from '@/lib/feed';
-import type { MarketSnapshot } from '@/lib/server-market';
+import { useMarket } from '@/lib/use-market';
 import { MarketSwap } from './MarketSwap';
 import styles from './Market.module.css';
 import { Corners } from './Shared';
@@ -10,39 +9,7 @@ import { PageHeader } from './PageHeader';
 import { formatPrice } from '@/lib/format';
 function PriceCard({ chainId }: { chainId: DestinationId }) {
   const { systems, errors, now } = useFeed();
-  const [market, setMarket] = useState<MarketSnapshot>();
-  const [error, setError] = useState('');
-  useEffect(() => {
-    const controller = new AbortController();
-    let busy = false;
-    const read = async () => {
-      if (busy) return;
-      busy = true;
-      try {
-        const response = await fetch(`/api/market?chainId=${chainId}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error();
-        const data: MarketSnapshot = await response.json();
-        if (!controller.signal.aborted) {
-          setMarket(data);
-          setError('');
-        }
-      } catch {
-        if (!controller.signal.aborted) setError('Recent swaps unavailable. Retrying in 15 s.');
-      } finally {
-        busy = false;
-      }
-    };
-    void read();
-    const timer = setInterval(read, 15000);
-    window.addEventListener('reflex:refresh', read);
-    return () => {
-      controller.abort();
-      clearInterval(timer);
-      window.removeEventListener('reflex:refresh', read);
-    };
-  }, [chainId]);
+  const { market, error } = useMarket(chainId);
   const system = systems[chainId];
   const points = market?.points ?? [];
   const min = Math.min(...points.map((p) => p.price)),

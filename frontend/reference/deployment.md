@@ -239,3 +239,23 @@ The script builds the frontend with `NEXT_PUBLIC_INDEXER_URL=https://<indexer-do
 The containers publish no ports; they join the existing `koelakan_default` Docker network. The Caddy instance already on that VPS terminates TLS, and the site block from `deploy/Caddyfile.reflex` was appended once to its Caddyfile, with a backup kept at `Caddyfile.bak-reflex`. Append the block in place, because Caddy bind-mounts that single file, then run `docker exec koelakan-caddy-1 caddy reload --config /etc/caddy/Caddyfile`.
 
 The indexer does not backfill. Orders that triggered before it started, or during a gap of more than 25 blocks, keep showing block-time latency.
+
+## Price-follower bot
+
+A third container, `pricebot` (`pricebot/`), keeps both demo pools tracking the real ETH/USD price, using the mean of the Coinbase and Kraken spot prices. When a pool drifts more than 0.15% away, the bot swaps through the PoolSwapTest router with the price limit set to the target. Each swap moves the price at most 0.75%, and swaps on a chain are at least 30 s apart. A large gap therefore closes gradually, and the market chart shows a continuous, realistic line. Stop-loss and trailing orders then trigger on real market moves.
+
+The bot reads a fresh wallet's key from `~/.omnireflex/pricebot.env` on the VPS (`BOT_PRIVATE_KEY=0x…`, mode 600). That file sits outside the synced `~/reflex` directory, so `rsync --delete` never removes it. This wallet only holds testnet ETH and demo tokens. Never use the operator keystore for it.
+
+One-time setup on each destination, run by the operator (the token owner):
+
+```bash
+BOT_ADDRESS=0x… forge script script/SetupPriceBot.s.sol --rpc-url <destination-rpc> \
+  --account "$ACCOUNT" --sender "$SENDER" --broadcast
+```
+
+The script is idempotent. It does two things:
+
+- **Adds liquidity.** It places a wide position (rdETH ≈ 500–10 000 rdUSD, salt `omnireflex-wide`) so the pool can follow ETH outside the original ±4800-tick range.
+- **Funds the bot.** It tops the bot wallet up to 200 rdETH, 600 000 rdUSD and 0.02 ETH.
+
+Every swap on a registered pool is billed in lREACT to the reactive contract. The bot pauses itself while that balance is below `LREACT_FLOOR` (0.5 by default), so user orders keep their funding. To pause it by hand, run `docker compose stop pricebot` in `~/reflex`. Its status is at `/health` on port 8791 inside the Docker network.
