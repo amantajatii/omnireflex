@@ -2,6 +2,7 @@
   "callbackProxy": "0x775c9B990ADe401060B78D0e98684eEf8d2466C1",
   "chainId": 1301,
   "executor": "0x75ef4A111D3f207ab9dC0E9BAF0646D74578C47d",
+  "faucet": "0xF5080bFb77dbb275d67b253a0E145683F35E96b3",
   "liquidityRouter": "0x5fa728C0A5cfd51BEe4B060773f50554c0C8A7AB",
   "poolId": "0xd7cfc963e52ecd83c8f3ab235dd58cd5a30fa651afe56eb17ce3162ff385356d",
   "poolKey": {

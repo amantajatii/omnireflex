@@ -70,6 +70,33 @@ ConfigureCrossChain.s.sol  unichain_sepolia
 ConfigureCrossChain.s.sol  base_sepolia
 ```
 
+Deploy and fund the demo-token faucets separately after destination setup:
+
+```bash
+./script/deploy.sh faucet
+```
+
+This runs `DeployFaucet.s.sol` on `unichain_sepolia` and `base_sepolia` and is
+deliberately excluded from `all`. Each faucet drips 5 rdETH and 15,000 rdUSD per
+address with a 1-hour cooldown. The operator owns the faucet and can call
+`setDrips`, `setCooldown`, or `withdraw(token, to, amount)`.
+The script mints balances up to 50,000 rdETH and 150,000,000 rdUSD per faucet,
+leaving demo-token ownership with the operator. On reruns it checks the recorded
+faucet's code and token addresses before reuse and tops up only missing balances.
+It adds `faucet` to the existing destination JSON while preserving all other
+fields, and writes only in broadcast context. A rerun therefore refills whatever
+users have claimed. Cooldowns are per address, so the faucet is not sybil-resistant;
+that is acceptable for valueless testnet tokens. If a broadcast fails after the record
+was written, a rerun stops with a "no code" error: delete the `faucet` key from that
+destination JSON and run the step again.
+
+For a read-only simulation, export the root `.env` first, then run from `contracts/`:
+
+```bash
+forge script script/DeployFaucet.s.sol:DeployFaucet --rpc-url unichain_sepolia \
+  --sender 0x67a75e24156225e9f89055d51b973b83fb348e2d
+```
+
 Defaults, in integer base units:
 
 | Variable | Default | Meaning |

@@ -9,8 +9,8 @@ if (( $# > 1 )); then
 fi
 step="${1:-all}"
 case "$step" in
-  reactive|unichain|base|configure|crosschain|all) ;;
-  *) echo 'Usage: ./script/deploy.sh reactive|unichain|base|configure|crosschain|all' >&2; exit 2 ;;
+  reactive|unichain|base|configure|crosschain|faucet|all) ;;
+  *) echo 'Usage: ./script/deploy.sh reactive|unichain|base|configure|crosschain|faucet|all' >&2; exit 2 ;;
 esac
 # This operator command deliberately broadcasts. No key is embedded in the scripts.
 if [[ -f "$REPO_DIR/.env" ]]; then
@@ -45,6 +45,10 @@ configure() { run ConfigureReactive lasna; }
 crosschain() {
   run ConfigureCrossChain unichain_sepolia
   run ConfigureCrossChain base_sepolia
+}
+faucet() {
+  run DeployFaucet unichain_sepolia
+  run DeployFaucet base_sepolia
 }
 if [[ "$step" == all ]]; then
   reactive
