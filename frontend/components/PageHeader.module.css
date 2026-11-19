@@ -1,0 +1,33 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin: 0;
+}
+.breadcrumb {
+  font: 10.5px var(--rx-font-mono);
+  color: var(--rx-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(32px, 4vw, 48px);
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--rx-soft);
+  max-width: 65ch;
+}
+.actions {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+}

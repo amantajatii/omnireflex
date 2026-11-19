@@ -1,0 +1,72 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  background: radial-gradient(ellipse, var(--rx-raise), var(--rx-paper) 70%);
+  overflow: hidden;
+}
+.canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.canvas:active {
+  cursor: grabbing;
+}
+.ticks {
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  font-size: 8px;
+}
+.bottom {
+  position: absolute;
+  bottom: 20px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--rx-soft);
+  font-size: 8px;
+  pointer-events: none;
+}
+.flash {
+  animation: flash 2s var(--rx-ease);
+}
+@keyframes flash {
+  0%,
+  30% {
+    background: var(--rx-ink);
+    color: var(--rx-paper);
+  }
+  100% {
+    background: transparent;
+    color: var(--rx-soft);
+  }
+}
+@media (max-width: 820px) {
+  .wrap,
+  .canvas {
+    min-height: 370px;
+  }
+}
+@media (max-width: 480px) {
+  .wrap,
+  .canvas {
+    min-height: 330px;
+  }
+  .bottom {
+    font-size: 7px;
+    left: 15px;
+    right: 15px;
+  }
+}

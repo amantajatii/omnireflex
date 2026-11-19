@@ -1,0 +1,102 @@
+import Link from 'next/link';
+import { formatEther } from 'viem';
+import { formatAmount, formatNumber, formatPrice } from '@/lib/format';
+import { chains, type DestinationId } from '@/lib/chains';
+import type { OrderParams } from '@/lib/order-encoding';
+import styles from './NewOrder.module.css';
+
+type Props = {
+  params?: OrderParams;
+  kind: string;
+  side: string;
+  amount: string;
+  execution: DestinationId;
+  trigger: DestinationId;
+  lower: string;
+  upper: string;
+  trail: string;
+  hours: number;
+  spot?: number;
+  fee?: bigint;
+  created?: { chain: DestinationId; id: bigint };
+  watching: boolean;
+};
+export default function NewOrderPreview(p: Props) {
+  const prices = [
+    p.spot,
+    ...(p.kind === 'trail' && p.spot ? [p.spot * (1 - Number(p.trail) / 100)] : []),
+    ...(['stop', 'bracket'].includes(p.kind) ? [Number(p.lower)] : []),
+    ...(['take', 'bracket'].includes(p.kind) ? [Number(p.upper)] : []),
+  ].filter((n): n is number => !!n && Number.isFinite(n));
+  const low = Math.min(...prices) * 0.99,
+    high = Math.max(...prices) * 1.01;
+  const y = (price: number) => 125 - ((price - low) / (high - low)) * 90;
+  const input = p.side === 'eth' ? 'rdETH' : 'rdUSD';
+  return (
+    <aside className={`panel ${styles.preview}`} aria-label="Order preview">
+      <span className="mono">LIVE PREVIEW</span>
+      <h2>Your price. Your exit.</h2>
+      <p>
+        {p.params ? (
+          <>
+            Sell {p.amount} {input} on {chains[p.execution].name}{' '}
+            {p.kind === 'trail'
+              ? `when the price retreats ${p.trail}% from its peak`
+              : `if rdETH ${p.kind === 'stop' ? `≤ ${p.lower}` : p.kind === 'take' ? `≥ ${p.upper}` : `≤ ${p.lower} or ≥ ${p.upper}`} rdUSD`}{' '}
+            on {chains[p.trigger].name}. Receive at least{' '}
+            {formatNumber(formatEther(p.params.minAmountOut), 6)}{' '}
+            {p.side === 'eth' ? 'rdUSD' : 'rdETH'}. Expires in {p.hours} h.
+          </>
+        ) : (
+          'Set an amount and trigger to preview your order.'
+        )}
+      </p>
+      {prices.length > 0 && (
+        <svg viewBox="0 0 300 160" role="img" aria-label="Spot and configured trigger prices">
+          <path d="M10 140H290" stroke="var(--rx-line)" />
+          {prices.map((price, i) => (
+            <g key={i}>
+              <path
+                d={`M10 ${y(price)}H290`}
+                stroke="var(--rx-ink)"
+                strokeDasharray={i ? '4 4' : undefined}
+                opacity={i ? 0.45 : 1}
+              />
+              <text x="12" y={y(price) - 6} fill="var(--rx-soft)" fontSize="10">
+                {i === 0 ? 'Spot' : 'Trigger'} · {formatPrice(price)}
+              </text>
+            </g>
+          ))}
+        </svg>
+      )}
+      {p.params && (
+        <details>
+          <summary>Encoded values</summary>
+          <pre className="mono">{`lowerTick: ${p.params.trigger.lowerTick}\nupperTick: ${p.params.trigger.upperTick}\ntrailTicks: ${p.params.trigger.trailTicks}\ninverted: ${p.params.trigger.inverted}\nminAmountOut: ${p.params.minAmountOut}`}</pre>
+        </details>
+      )}
+      <div className={styles.fee}>
+        <span>Execution fee</span>
+        <strong className="mono">
+          {p.fee === undefined ? 'Loading…' : `${formatAmount(p.fee, 'ETH')} ETH`}
+        </strong>
+        <p>Refundable on cancel after 3 min.</p>
+      </div>
+      {p.created && (
+        <div
+          className={styles.success}
+          style={p.watching ? { outline: '1px solid var(--rx-ink)' } : undefined}
+          role="status"
+        >
+          <strong>Order #{p.created.id.toString()} created</strong>
+          <p>
+            {p.watching
+              ? 'Reactive contract is now watching.'
+              : 'Waiting for OrderMirrored on Lasna…'}
+          </p>
+          <Link href={`/app/me?order=${p.created.chain}:${p.created.id}`}>View in My orders →</Link>
+        </div>
+      )}
+    </aside>
+  );
+}

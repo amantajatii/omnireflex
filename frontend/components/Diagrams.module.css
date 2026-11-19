@@ -1,0 +1,143 @@
+.grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 26px;
+}
+.grid article {
+  padding: 25px 24px 20px;
+  min-width: 0;
+}
+.caption {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.caption h3 {
+  font-size: 18px;
+}
+.caption span {
+  font-size: 8px;
+  color: var(--rx-soft);
+}
+.grid svg {
+  width: 100%;
+  color: var(--rx-ink);
+  overflow: visible;
+}
+.grid svg text {
+  font: 10px var(--rx-font-sans);
+  fill: currentColor;
+}
+.grid svg .small {
+  font: 8px var(--rx-font-mono);
+  fill: var(--rx-soft);
+}
+.grid p {
+  font-size: 11px;
+  color: var(--rx-soft);
+  margin-top: 5px;
+}
+.chart {
+  grid-column: 1 / -1;
+}
+.chart svg {
+  max-height: 250px;
+}
+.chart .caption {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.chainButtons {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.chainButtons button {
+  font: 8px var(--rx-font-mono);
+  border: 1px solid var(--rx-line-strong);
+  background: var(--rx-paper);
+  padding: 5px;
+}
+.chainButtons button[aria-pressed='true'] {
+  border-color: var(--rx-ink);
+}
+.connector {
+  opacity: 0.18;
+  animation: connection 3.6s var(--rx-ease) infinite;
+}
+.connector.pinned {
+  opacity: 1;
+  animation: none;
+  stroke-width: 2;
+}
+.price {
+  stroke-dasharray: 800;
+  stroke-dashoffset: 800;
+  animation: draw 4s var(--rx-ease) infinite alternate;
+}
+.trail {
+  animation: trailing 4s var(--rx-ease) infinite alternate;
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes trailing {
+  from {
+    opacity: 0.2;
+    clip-path: inset(0 80% 0 0);
+  }
+  to {
+    opacity: 0.8;
+    clip-path: inset(0);
+  }
+}
+@keyframes connection {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+@media (max-width: 650px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .chart {
+    grid-column: auto;
+  }
+  .chart .caption {
+    align-items: start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .grid article {
+    padding: 22px 17px;
+  }
+  .grid svg {
+    margin: 15px 0;
+  }
+  .grid p {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .packet {
+    display: none;
+  }
+  .price {
+    stroke-dashoffset: 0;
+  }
+  .connector {
+    opacity: 0.5;
+  }
+  .trail {
+    opacity: 0.8;
+    clip-path: none;
+  }
+}

@@ -1,0 +1,12 @@
+.article p {
+  margin: 16px 0 30px;
+  color: var(--rx-soft);
+  font-size: 12px;
+}
+.article pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px/1.9 var(--rx-font-mono);
+  max-width: 85ch;
+  color: var(--rx-soft);
+}

@@ -1,0 +1,240 @@
+.overview {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 40px;
+}
+.overview h1 {
+  font-size: 42px;
+  margin: 20px 0 13px;
+}
+.overview p {
+  font-size: 12px;
+  color: var(--rx-soft);
+}
+.faint {
+  color: color-mix(in srgb, var(--rx-faint) 70%, var(--rx-ink));
+}
+.totals {
+  display: flex;
+  gap: 30px;
+  margin: 0;
+}
+.totals > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+}
+.totals dt {
+  font-size: 9px;
+  color: var(--rx-soft);
+}
+.totals dd {
+  font-size: 29px;
+  font-weight: 400;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+.systems {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.9fr;
+  gap: 24px;
+}
+.notice {
+  padding: 28px;
+  background: var(--rx-card);
+  border: 1px solid var(--rx-line);
+  margin-bottom: 22px;
+}
+.notice strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.notice p {
+  font-size: 12px;
+  margin-top: 9px;
+  color: var(--rx-soft);
+}
+.notice > span {
+  display: block;
+  margin-top: 18px;
+  color: var(--rx-soft);
+  font-size: 9px;
+}
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 11px;
+}
+.table th {
+  font: 9px var(--rx-font-mono);
+  color: var(--rx-soft);
+  font-weight: 400;
+  padding: 13px 9px;
+  border-block: 1px solid var(--rx-line);
+  white-space: nowrap;
+}
+.table td {
+  padding: 18px 9px;
+  border-bottom: 1px solid var(--rx-line);
+}
+.table td:global(.mono) {
+  font-size: 10px;
+}
+.table tbody tr {
+  cursor: pointer;
+  transition: background 0.2s var(--rx-ease);
+}
+.table tbody tr:hover {
+  background: var(--rx-card);
+}
+.table small {
+  display: block;
+  font: 8px var(--rx-font-mono);
+  color: var(--rx-soft);
+  margin-top: 4px;
+}
+.orderButton {
+  background: transparent;
+  border: 0;
+  padding: 5px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 12px var(--rx-font-mono);
+}
+.orderButton > span {
+  font-size: 7px;
+  border: 1px solid var(--rx-line-strong);
+  padding: 2px 4px;
+}
+.pill {
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  background: color-mix(in srgb, currentColor 4%, var(--rx-paper));
+  padding: 4px 7px;
+  border-radius: 2px;
+}
+.pill i {
+  width: 4px;
+  height: 4px;
+}
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.bottomNote {
+  font-size: 10px;
+  color: var(--rx-soft);
+  margin-top: 26px;
+}
+@media (max-width: 1050px) {
+  .overview {
+    align-items: start;
+    flex-direction: column;
+  }
+  .totals {
+    gap: 45px;
+  }
+  .systems {
+    grid-template-columns: 1fr 1fr;
+  }
+  .table {
+    font-size: 10px;
+  }
+  .table td,
+  .table th {
+    padding-inline: 5px;
+  }
+}
+@media (max-width: 700px) {
+  .systems {
+    grid-template-columns: 1fr;
+  }
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+  }
+  .table thead {
+    display: none;
+  }
+  .table tr {
+    padding: 17px 0;
+    border-top: 1px solid var(--rx-line);
+  }
+  .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    padding: 8px 0;
+    font-size: 12px;
+    gap: 15px;
+    text-align: right;
+  }
+  .table td:before {
+    content: attr(data-label);
+    font: 10px var(--rx-font-sans);
+    color: var(--rx-soft);
+    margin-right: auto;
+  }
+  .table small {
+    display: inline;
+    margin-left: 8px;
+    font-size: 8px;
+  }
+  .table td[data-label='Trigger chain'] {
+    flex-wrap: wrap;
+  }
+  .table .orderButton {
+    font-size: 14px;
+  }
+  .totals {
+    gap: 26px;
+  }
+  .totals dt {
+    max-width: 15ch;
+  }
+  .overview h1 {
+    font-size: 36px;
+  }
+  .notice {
+    padding: 22px;
+  }
+}
+.loop {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px 0;
+  border: 0;
+  border-bottom: 1px solid var(--rx-line);
+  background: none;
+  text-align: left;
+  font-size: 12px;
+}
+.health {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  font-size: 11px;
+}
+.health a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}

@@ -20,3 +20,10 @@ AGENTS.md
 CLAUDE.md
 .graphifyignore
 .claude/
+
+# Visual reference only (third-party, not committed)
+ink-orbit-saas-template/
+# Script-test fixtures written next to real deployment records
+contracts/deployments/*.test.json
+# Forge dry-run simulations
+contracts/broadcast/*/*/dry-run/
