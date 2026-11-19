@@ -222,3 +222,20 @@ build and validate SYSTEM subscriptions/debt and destination proxy behaviour on 
 real networks before the demo. Proxy charges may draw reserved ETH; keep executor
 balance at least `reservedFees`. ETH refund claims follow the documented 180-second
 delay and may be consumed by a late callback after cancellation.
+
+## Hosting (frontend + latency indexer)
+
+The public app runs on a VPS at `https://reflex.43-157-202-28.sslip.io`, with two containers:
+
+- `frontend`: the Next.js standalone bundle, built locally and run as a single Node process. That one process holds the shared log-scan cache.
+- `indexer` (`indexer/`): records the wall-clock milliseconds at which it first sees each Swap, OrderTriggered and OrderExecuted. It serves them at `/indexer/latency?chainId=&orderId=`, and `/indexer/health` reports its status.
+
+```bash
+./deploy/deploy.sh
+```
+
+The script builds the frontend with `NEXT_PUBLIC_INDEXER_URL=https://<domain>/indexer`, stages both services into `deploy/.stage/`, and rsyncs them to `~/reflex` on the SSH host `vps`. It then runs `docker compose up -d --build`. To target a different host or domain, override `DEPLOY_HOST`, `DEPLOY_DOMAIN` and `DEPLOY_DIR`.
+
+The containers publish no ports; they join the existing `koelakan_default` Docker network. The Caddy instance already on that VPS terminates TLS, and the site block from `deploy/Caddyfile.reflex` was appended once to its Caddyfile, with a backup kept at `Caddyfile.bak-reflex`. Append the block in place, because Caddy bind-mounts that single file, then run `docker exec koelakan-caddy-1 caddy reload --config /etc/caddy/Caddyfile`.
+
+The indexer does not backfill. Orders that triggered before it started, or during a gap of more than 25 blocks, keep showing block-time latency.

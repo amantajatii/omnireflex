@@ -1,0 +1,10 @@
+# Appended once to the VPS Caddyfile (koelakan/agents/deploy/Caddyfile).
+reflex.43-157-202-28.sslip.io {
+	encode gzip
+	handle_path /indexer/* {
+		reverse_proxy reflex-indexer:8790
+	}
+	handle {
+		reverse_proxy reflex-frontend:3000
+	}
+}

@@ -1,0 +1,39 @@
+# Reflex on the shared VPS. The existing Caddy (koelakan project) terminates TLS
+# and reaches these containers over its network; no host ports are published.
+name: reflex
+
+services:
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 512m
+    networks:
+      edge:
+        aliases: [reflex-frontend]
+    logging: &logging
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+
+  indexer:
+    build: ./indexer
+    restart: unless-stopped
+    environment:
+      NODE_OPTIONS: --max-old-space-size=160
+    mem_limit: 192m
+    volumes:
+      - indexer-data:/data
+      - ./indexer/records:/app/records:ro
+    networks:
+      edge:
+        aliases: [reflex-indexer]
+    logging: *logging
+
+volumes:
+  indexer-data:
+
+networks:
+  edge:
+    name: koelakan_default
+    external: true

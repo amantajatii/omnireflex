@@ -27,3 +27,6 @@ ink-orbit-saas-template/
 contracts/deployments/*.test.json
 # Forge dry-run simulations
 contracts/broadcast/*/*/dry-run/
+
+# VPS deploy staging
+deploy/.stage/
