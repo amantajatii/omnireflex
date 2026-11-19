@@ -1,4 +1,4 @@
-# Reflex frontend
+# OmniReflex frontend
 
 Original Next.js App Router / strict TypeScript frontend: `/` landing and `/app` interactive testnet dApp.
 The architecture and deployment footer links open copies of the repository references.

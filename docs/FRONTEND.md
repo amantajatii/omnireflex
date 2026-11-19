@@ -1,4 +1,4 @@
-# Reflex frontend spec
+# OmniReflex frontend spec
 
 A Next.js app in `frontend/` with two routes:
 
@@ -61,7 +61,7 @@ Use the CSS custom-property prefix `--rx-`.
 ### Nav
 
 - A sticky bar 10 px from the top, 58 px tall, frosted (`paper` at 86 %, 12 px backdrop blur), with a border and shadow.
-- **Brand:** the mark plus "Reflex". The mark rotates 180° on hover.
+- **Brand:** the mark plus "OmniReflex". The mark rotates 180° on hover.
 - **Centre links:** a small caret slides under the section currently in view.
 - **Right side:** a theme toggle and the primary button.
 - **Narrow widths:** below about 820 px the links collapse into a menu button that opens a dropdown panel.
@@ -119,7 +119,7 @@ The right half of the hero holds a generative "ink sculpture": a stippled 3D poi
 - Bottom-left: `drag · click to reforge`.
 - Bottom-right: `seed 0x…`.
 
-### Reflex twist
+### OmniReflex twist
 
 When the live feed sees a new `OrderExecuted` event, trigger a reforge automatically and flash the seed label to that order's id. The trigger is a callback prop.
 

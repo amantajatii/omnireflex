@@ -1,4 +1,4 @@
-# Reflex
+# OmniReflex
 
 Keeper-free stop-loss, take-profit, bracket and trailing-stop orders for Uniswap v4,
 driven by reactive contracts on Reactive Network (Omni). A price move on Unichain Sepolia

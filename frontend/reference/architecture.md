@@ -1,6 +1,6 @@
-# Reflex — Architecture
+# OmniReflex — Architecture
 
-Reflex is a reactive order engine for Uniswap v4. Users park stop-loss, take-profit,
+OmniReflex is a reactive order engine for Uniswap v4. Users park stop-loss, take-profit,
 bracket (OCO) and trailing-stop orders on a destination chain; a single reactive
 contract on Reactive Network watches pool prices on Unichain Sepolia and Base Sepolia
 and fires the order through a callback the moment its condition is met. No keeper,

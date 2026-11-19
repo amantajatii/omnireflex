@@ -1,4 +1,4 @@
-# Reflex app, phase 2: interactive dApp
+# OmniReflex app, phase 2: interactive dApp
 
 Phase 1 (see `docs/FRONTEND.md`) shipped the landing page and a read-only dashboard. Phase 2 turns `/app` into a usable dApp. Anyone with testnet ETH can:
 
@@ -29,7 +29,7 @@ The landing page `/` keeps its current top nav and has no sidebar. Everything un
 **Desktop (≥ 960 px):**
 
 - **Frame:** a fixed rail 252 px wide, full height, sticky. It is a `paper` panel with a 1 px `line` right border on the hatched page. Content sits to its right, inside the existing centred column with framed panels.
-- **Top:** the brand mark, "Reflex" and the `TESTNET` tag. The mark rotates on hover, as in the nav.
+- **Top:** the brand mark, "OmniReflex" and the `TESTNET` tag. The mark rotates on hover, as in the nav.
 - **Nav groups:** each group has a mono micro-label, uppercase, 10.5 px, in `faint`.
   - TRADE: New order, My orders, Market, Faucet.
   - NETWORK: Overview, All orders, System.

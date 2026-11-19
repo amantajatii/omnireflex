@@ -203,7 +203,7 @@ export default function NewOrder() {
       <PageHeader
         breadcrumb="Trade / New order"
         title="Set it in motion."
-        subtitle="A swap crosses your price. Reflex takes it from there."
+        subtitle="A swap crosses your price. OmniReflex takes it from there."
       />
       <div className={styles.layout}>
         <form

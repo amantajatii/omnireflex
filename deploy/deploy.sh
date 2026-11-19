@@ -3,7 +3,7 @@
 set -euo pipefail
 
 HOST="${DEPLOY_HOST:-vps}"
-DOMAIN="${DEPLOY_DOMAIN:-reflex.43-157-202-28.sslip.io}"
+DOMAIN="${DEPLOY_DOMAIN:-omnireflex.amantajati.studio}"
 REMOTE_DIR="${DEPLOY_DIR:-reflex}"
 if [[ ! "$REMOTE_DIR" =~ ^[A-Za-z0-9_-]+$ ]]; then
   echo "DEPLOY_DIR must be a plain directory name under the remote home" >&2

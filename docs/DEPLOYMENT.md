@@ -1,4 +1,4 @@
-# Reflex testnet deployment and demo
+# OmniReflex testnet deployment and demo
 
 The scripts target Lasna (5318007), Unichain Sepolia (1301), and Base Sepolia
 (84532). Infrastructure addresses live in `contracts/script/lib/Addresses.sol`.
@@ -214,7 +214,7 @@ and test routers, including both currency orderings forced by CREATE2 salts, pri
 liquidity, fee/allowlist configuration, market moves, and accepted stop/trailing orders. Default stop executions after the default market
 move are checked for both currency orderings, including two sequential orders.
 The manager uses the existing separately compiled 0.8.26 fixture artifact because
-Reflex scripts use ^0.8.29. Deployment JSON is round-tripped in a named test-only record, cleaned before setup,
+OmniReflex scripts use ^0.8.29. Deployment JSON is round-tripped in a named test-only record, cleaned before setup,
 before assertions and on decode failure; simulation writes are checked to be skipped.
 
 Funding and fee defaults need live gas calibration. Confirm Lasna accepts the Cancun
@@ -225,7 +225,7 @@ delay and may be consumed by a late callback after cancellation.
 
 ## Hosting (frontend + latency indexer)
 
-The public app runs on a VPS at `https://reflex.43-157-202-28.sslip.io`, with two containers:
+The public app runs on a VPS at `https://omnireflex.amantajati.studio` (DNS A record → 43.157.202.28; the earlier sslip.io names redirect there), with two containers:
 
 - `frontend`: the Next.js standalone bundle, built locally and run as a single Node process. That one process holds the shared log-scan cache.
 - `indexer` (`indexer/`): records the wall-clock milliseconds at which it first sees each Swap, OrderTriggered and OrderExecuted. It serves them at `/indexer/latency?chainId=&orderId=`, and `/indexer/health` reports its status.

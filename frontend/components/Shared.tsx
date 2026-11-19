@@ -126,9 +126,9 @@ export function Nav({ dashboard = false }: { dashboard?: boolean }) {
   }, [ids]);
   return (
     <header className={styles.nav}>
-      <Link href="/" className={styles.brand} aria-label="Reflex home">
+      <Link href="/" className={styles.brand} aria-label="OmniReflex home">
         <Mark />
-        Reflex<span className={`mono ${styles.testnet}`}>TESTNET</span>
+        OmniReflex<span className={`mono ${styles.testnet}`}>TESTNET</span>
       </Link>
       <nav
         aria-label="Main"
@@ -204,7 +204,7 @@ export function Footer() {
     <footer className={styles.footer}>
       <Link href="/" className={styles.brand}>
         <Mark />
-        Reflex
+        OmniReflex
       </Link>
       <div className={styles.footerLinks}>
         <Link href="/app">Dashboard</Link>

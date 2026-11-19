@@ -6,7 +6,7 @@ const sans = Manrope({ subsets: ['latin'], variable: '--rx-font-sans' });
 const serif = Newsreader({ subsets: ['latin'], variable: '--rx-font-serif' });
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--rx-font-mono' });
 export const metadata: Metadata = {
-  title: 'Reflex — Orders that fire on their own',
+  title: 'OmniReflex — Orders that fire on their own',
   description:
     'Reactive orders on Uniswap v4. Follow the full execution loop across Unichain, Base and Reactive Lasna.',
 };

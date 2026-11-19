@@ -16,7 +16,7 @@ const faqs = [
   ],
   [
     'Is this mainnet?',
-    'No. Reflex currently runs on testnets with demo tokens on real Uniswap v4 pools.',
+    'No. OmniReflex currently runs on testnets with demo tokens on real Uniswap v4 pools.',
   ],
   [
     'Why are latency numbers in seconds?',

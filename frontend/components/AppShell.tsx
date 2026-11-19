@@ -66,7 +66,7 @@ function Rail({ close }: { close?: () => void }) {
     <>
       <Link href="/app" className={styles.brand} onClick={close}>
         <Mark />
-        Reflex <span className="tag mono">TESTNET</span>
+        OmniReflex <span className="tag mono">TESTNET</span>
       </Link>
       {close && (
         <button className={styles.close} onClick={close} aria-label="Close navigation">
@@ -110,14 +110,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const title =
     groups
       .flatMap(([, links]) => [...links] as readonly (readonly [string, string])[])
-      .find(([, href]) => href === path)?.[0] ?? 'Reflex';
+      .find(([, href]) => href === path)?.[0] ?? 'OmniReflex';
   return (
     <div className={styles.shell}>
       <aside className={styles.rail}>
         <Rail />
       </aside>
       <header className={styles.mobile}>
-        <Link href="/app" aria-label="Reflex overview">
+        <Link href="/app" aria-label="OmniReflex overview">
           <Mark />
         </Link>
         <span>{title}</span>

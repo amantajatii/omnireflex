@@ -1,4 +1,4 @@
-# Reflex on the shared VPS. The existing Caddy (koelakan project) terminates TLS
+# OmniReflex on the shared VPS. The existing Caddy (koelakan project) terminates TLS
 # and reaches these containers over its network; no host ports are published.
 name: reflex
 

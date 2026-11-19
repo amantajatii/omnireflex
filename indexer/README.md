@@ -1,6 +1,6 @@
-# Reflex latency indexer
+# OmniReflex latency indexer
 
-Records the wall-clock time (`Date.now()`, ms) at which it FIRST SAW each event of the Reflex loop, live:
+Records the wall-clock time (`Date.now()`, ms) at which it FIRST SAW each event of the OmniReflex loop, live:
 
 1. T0: Uniswap v4 `Swap` (our pool) on Unichain Sepolia (1301) / Base Sepolia (84532)
 2. T1: `OrderTriggered` from ReflexReactive on Reactive Lasna (5318007)

@@ -1,5 +1,5 @@
 # Appended once to the VPS Caddyfile (koelakan/agents/deploy/Caddyfile).
-reflex.43-157-202-28.sslip.io {
+omnireflex.amantajati.studio {
 	encode gzip
 	handle_path /indexer/* {
 		reverse_proxy reflex-indexer:8790
@@ -7,4 +7,9 @@ reflex.43-157-202-28.sslip.io {
 	handle {
 		reverse_proxy reflex-frontend:3000
 	}
+}
+
+# Earlier sslip.io addresses: keep links working.
+omnireflex.43-157-202-28.sslip.io, reflex.43-157-202-28.sslip.io {
+	redir https://omnireflex.amantajati.studio{uri} permanent
 }
