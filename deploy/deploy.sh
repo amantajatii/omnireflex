@@ -4,6 +4,7 @@ set -euo pipefail
 
 HOST="${DEPLOY_HOST:-vps}"
 DOMAIN="${DEPLOY_DOMAIN:-omnireflex.amantajati.studio}"
+INDEXER_DOMAIN="${DEPLOY_INDEXER_DOMAIN:-omnireflex-indexer.amantajati.studio}"
 REMOTE_DIR="${DEPLOY_DIR:-reflex}"
 if [[ ! "$REMOTE_DIR" =~ ^[A-Za-z0-9_-]+$ ]]; then
   echo "DEPLOY_DIR must be a plain directory name under the remote home" >&2
@@ -13,7 +14,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="$ROOT/deploy/.stage"
 
 echo "› building frontend for https://$DOMAIN"
-(cd "$ROOT/frontend" && NEXT_PUBLIC_INDEXER_URL="https://$DOMAIN/indexer" npm run build)
+(cd "$ROOT/frontend" && NEXT_PUBLIC_INDEXER_URL="https://$INDEXER_DOMAIN" npm run build)
 
 echo "› staging"
 rm -rf "$STAGE"

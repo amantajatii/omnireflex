@@ -1,12 +1,18 @@
 # Appended once to the VPS Caddyfile (koelakan/agents/deploy/Caddyfile).
 omnireflex.amantajati.studio {
 	encode gzip
+	# The indexer moved to its own subdomain; keep old /indexer links working.
 	handle_path /indexer/* {
-		reverse_proxy reflex-indexer:8790
+		redir https://omnireflex-indexer.amantajati.studio{uri} permanent
 	}
 	handle {
 		reverse_proxy reflex-frontend:3000
 	}
+}
+
+omnireflex-indexer.amantajati.studio {
+	encode gzip
+	reverse_proxy reflex-indexer:8790
 }
 
 # Earlier sslip.io addresses: keep links working.
