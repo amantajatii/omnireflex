@@ -8,7 +8,7 @@ import { formatCooldown } from '@/lib/action-logic';
 import { useTransaction } from '@/lib/transactions';
 import { useFeed } from '@/lib/feed';
 import { ConnectWallet } from './WalletCard';
-import styles from './Market.module.css';
+import styles from './Faucet.module.css';
 import { Corners } from './Shared';
 import { PageHeader } from './PageHeader';
 import { formatAmount } from '@/lib/format';
@@ -61,39 +61,49 @@ function FaucetCard({ chainId }: { chainId: DestinationId }) {
     if (await run({ chainId, address: faucet, abi: faucetAbi, functionName: 'claim' }))
       await reads.refetch();
   };
+  const status = !faucet
+    ? 'Faucet not deployed yet'
+    : failed
+      ? 'Faucet reads unavailable. Retrying in 15 s.'
+      : !ready
+        ? 'Loading faucet…'
+        : empty
+          ? 'Faucet is empty. Try again after it is funded.'
+          : address && remaining
+            ? `Available in ${formatCooldown(remaining)}`
+            : address
+              ? 'Ready to claim'
+              : 'Connect to check your cooldown';
   return (
     <article className={`panel frame ${styles.card}`}>
       <Corners />
-      <span className="eyebrow">{chains[chainId].name}</span>
-      <h2>Demo tokens.</h2>
-      {!faucet ? (
-        <>
-          <p>5 rdETH + 15,000 rdUSD per claim</p>
-          <p className="muted">Faucet not deployed yet</p>
-        </>
-      ) : (
-        <>
-          <p>
-            {eth === undefined ? '…' : formatAmount(eth)} rdETH +{' '}
-            {usd === undefined ? '…' : formatAmount(usd)} rdUSD per claim
-          </p>
-          <p role="status" aria-live="polite">
-            {failed
-              ? 'Faucet reads unavailable. Retrying in 15 s.'
-              : !ready
-                ? 'Loading faucet…'
-                : empty
-                  ? 'Faucet is empty. Please try again after it is funded.'
-                  : address && remaining
-                    ? `Available in ${formatCooldown(remaining)}`
-                    : address
-                      ? 'Ready to claim'
-                      : 'Connect to check your cooldown.'}
-          </p>
+      <header className={styles.cardHead}>
+        <span className="eyebrow">{chains[chainId].name}</span>
+        <span
+          role="status"
+          aria-live="polite"
+          className={`mono ${styles.status}`}
+          data-ready={Boolean(faucet && address && ready && !remaining && !empty)}
+        >
+          {status}
+        </span>
+      </header>
+      <dl className={styles.drip} aria-label="Tokens per claim">
+        <div>
+          <dt>rdETH</dt>
+          <dd>{eth === undefined ? (faucet ? '…' : '5') : formatAmount(eth)}</dd>
+        </div>
+        <div>
+          <dt>rdUSD</dt>
+          <dd>{usd === undefined ? (faucet ? '…' : '15,000') : formatAmount(usd)}</dd>
+        </div>
+      </dl>
+      {faucet && (
+        <div className={styles.action}>
           {address ? (
             <>
               <button
-                className={styles.submit}
+                className="button"
                 disabled={busy || !ready || Boolean(remaining) || Boolean(empty) || !now}
                 onClick={() => void claim()}
               >
@@ -106,7 +116,7 @@ function FaucetCard({ chainId }: { chainId: DestinationId }) {
           ) : (
             <ConnectWallet />
           )}
-        </>
+        </div>
       )}
     </article>
   );
@@ -127,7 +137,7 @@ export function Faucet() {
       <section className={`panel frame ${styles.card}`}>
         <Corners />
         <h2>Need testnet ETH?</h2>
-        <p>Use a faucet below to fund your wallet on the destination chain.</p>
+        <p className={styles.note}>Claims and orders pay gas in ETH on the destination chain.</p>
         <ul className={styles.links}>
           <li>
             <a href="https://console.optimism.io/faucet" target="_blank" rel="noreferrer">

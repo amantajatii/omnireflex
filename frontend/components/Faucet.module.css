@@ -1,0 +1,91 @@
+.page {
+  container-type: inline-size;
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+@container (min-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.card {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+  background: var(--rx-paper);
+  border: 1px solid var(--rx-line);
+}
+.card h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.status {
+  font-size: 10px;
+  color: var(--rx-soft);
+  border: 1px solid var(--rx-line);
+  padding: 4px 8px;
+}
+.status[data-ready='true'] {
+  color: var(--rx-ink);
+  border-color: var(--rx-ink);
+}
+.drip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--rx-line);
+  background: var(--rx-card);
+}
+.drip > div {
+  padding: 16px;
+  min-width: 0;
+}
+.drip > div + div {
+  border-left: 1px solid var(--rx-line);
+}
+.drip dt {
+  font-size: 10px;
+  color: var(--rx-soft);
+  margin-bottom: 6px;
+}
+.drip dd {
+  margin: 0;
+  font: 22px var(--rx-font-mono);
+  overflow-wrap: anywhere;
+}
+.action {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+.action :global(.button):disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+.note {
+  margin: 0;
+  font: 11px var(--rx-font-mono);
+  color: var(--rx-soft);
+}
+.links {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
