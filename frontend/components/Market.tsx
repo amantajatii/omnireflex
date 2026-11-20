@@ -1,70 +1,121 @@
 'use client';
+import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useAccount } from 'wagmi';
 import { chains, destinationIds, type DestinationId } from '@/lib/chains';
 import { useFeed } from '@/lib/feed';
 import { useMarket } from '@/lib/use-market';
-import { MarketSwap } from './MarketSwap';
-import styles from './Market.module.css';
-import { Corners } from './Shared';
-import { PageHeader } from './PageHeader';
+import { useCandles } from '@/lib/use-candles';
+import { isSystemStale } from '@/lib/action-logic';
 import { formatPrice } from '@/lib/format';
-function PriceCard({ chainId }: { chainId: DestinationId }) {
+import type { Granularity } from '@/lib/server-candles';
+import { MarketSwap } from './MarketSwap';
+import MarketTicker from './MarketTicker';
+import styles from './Market.module.css';
+
+const TradingChart = dynamic(() => import('./TradingChart'), {
+  ssr: false,
+  loading: () => (
+    <div className={styles.chartLoading} role="status">
+      Loading trading chart…
+    </div>
+  ),
+});
+
+function PoolStat({
+  chainId,
+  selected,
+  select,
+}: {
+  chainId: DestinationId;
+  selected: boolean;
+  select: () => void;
+}) {
   const { systems, errors, now } = useFeed();
   const { market, error } = useMarket(chainId);
   const system = systems[chainId];
-  const points = market?.points ?? [];
-  const min = Math.min(...points.map((p) => p.price)),
-    max = Math.max(...points.map((p) => p.price));
-  const path = points
-    .map(
-      (p, i) =>
-        `${(i / Math.max(1, points.length - 1)) * 300},${70 - ((p.price - min) / (max - min || 1)) * 60}`,
-    )
-    .join(' ');
   return (
-    <article className={`panel frame ${styles.card}`}>
-      <Corners />
-      <span className="eyebrow">{chains[chainId].name}</span>
-      <h2 className={styles.price}>
-        {system ? formatPrice(system.price) : '—'} <small>rdUSD</small>
-      </h2>
-      <p>per rdETH · tick {system?.tick ?? '—'}</p>
-      {points.length > 0 ? (
-        <svg
-          className={styles.chart}
-          viewBox="0 0 300 80"
-          role="img"
-          aria-label={`Recent rdETH prices on ${chains[chainId].name}`}
-        >
-          <polyline points={path} fill="none" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
-      ) : (
-        <p className={styles.empty}>
-          {market?.updatedAt ? 'No swaps in the recent window.' : 'Loading recent swaps…'}
-        </p>
-      )}
-      <p className={styles.note}>
+    <button
+      type="button"
+      className={styles.pool}
+      aria-pressed={selected}
+      onClick={select}
+      aria-label={`Show the ${chains[chainId].name} pool on the chart`}
+    >
+      <span className="mono">{chains[chainId].name}</span>
+      <strong>
+        {system ? formatPrice(system.price) : '—'} <small>rdUSD / rdETH</small>
+      </strong>
+      <span className={styles.note}>
+        tick {system?.tick ?? '—'} ·{' '}
         {market?.lastSwap
-          ? `Last swap ${Math.max(0, Math.floor(now / 1000 - market.lastSwap))} s ago`
-          : 'Last swap not observed in this window'}
-      </p>
-      <p role="status">{error || market?.error || errors[chainId]}</p>
-    </article>
+          ? `last swap ${Math.max(0, Math.floor(now / 1000 - market.lastSwap))} s ago`
+          : 'no swap in window'}
+      </span>
+      {(error || market?.error || errors[chainId]) && (
+        <span role="status" className={styles.note}>
+          {error || market?.error || errors[chainId]}
+        </span>
+      )}
+    </button>
   );
 }
+
 export function Market() {
+  const { chainId: walletChain } = useAccount();
+  const feed = useFeed();
+  const [selected, setSelected] = useState<DestinationId>();
+  const chainId = selected ?? (walletChain === 84532 ? 84532 : 1301);
+  const [granularity, setGranularity] = useState<Granularity>(60);
+  const candles = useCandles(granularity);
+  const { market, error: marketError } = useMarket(chainId);
+  const system = feed.systems[chainId];
+  const stale = isSystemStale(system, feed.now, feed.errors[chainId]);
+  // Executions only: every order fired by a swap on this pool gets a marker on the chart.
+  const executed = useMemo(
+    () => feed.orders.filter((row) => row.status === 'Executed'),
+    [feed.orders],
+  );
   return (
     <div className={styles.page}>
-      <PageHeader
-        breadcrumb="Trade / Market"
-        title="Move the market."
-        subtitle="Demo assets. Real Uniswap v4 swaps."
-      />
-      <div className={styles.grid}>
-        {destinationIds.map((id) => (
-          <PriceCard key={id} chainId={id} />
-        ))}
+      <div className={styles.heading}>
+        <h1>Market</h1>
+        <p>Demo assets, real Uniswap v4 swaps. A swap that crosses a trigger fires the order.</p>
       </div>
-      <MarketSwap />
+      <MarketTicker
+        stats={candles.snapshot?.stats}
+        chainId={chainId}
+        spot={system?.price}
+        stale={stale}
+      />
+      <div className={styles.layout}>
+        <div className={styles.chartArea}>
+          <TradingChart
+            snapshot={candles.snapshot}
+            error={candles.error}
+            market={market}
+            marketError={marketError}
+            granularity={granularity}
+            setGranularity={setGranularity}
+            trigger={chainId}
+            spot={system?.price}
+            orders={executed}
+          />
+          <div className={styles.pools}>
+            {destinationIds.map((id) => (
+              <PoolStat
+                key={id}
+                chainId={id}
+                selected={id === chainId}
+                select={() => setSelected(id)}
+              />
+            ))}
+          </div>
+        </div>
+        <div className={styles.swapArea}>
+          <MarketSwap chain={chainId} onChainChange={setSelected} />
+        </div>
+      </div>
     </div>
   );
 }

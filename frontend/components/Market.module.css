@@ -1,19 +1,124 @@
 .page {
+  container-type: inline-size;
   display: grid;
-  gap: 28px;
+  gap: 16px;
+  min-width: 0;
 }
-.page h1 {
-  font-size: clamp(32px, 5vw, 48px);
-  margin: 8px 0;
+.heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.page .heading h1 {
+  font-size: 25px;
+  margin: 0;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.chartArea {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.swapArea {
+  min-width: 0;
+}
+@container (min-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .swapArea {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+}
+@container (min-width: 1500px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
+}
+.chartLoading {
+  min-height: 460px;
+  padding: 24px;
+  background: var(--rx-paper);
+  border: 1px solid var(--rx-line);
+}
+.pools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.pool {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 16px;
+  min-width: 0;
+  background: var(--rx-paper);
+  border: 1px solid var(--rx-line);
+  color: var(--rx-ink);
+  cursor: pointer;
+}
+.pool:hover {
+  border-color: var(--rx-line-strong);
+}
+.pool[aria-pressed='true'] {
+  border-color: var(--rx-ink);
+}
+.pool > span:first-child {
+  font-size: 10px;
+  color: var(--rx-soft);
+}
+.pool strong {
+  font: 18px var(--rx-font-mono);
+  overflow-wrap: anywhere;
+}
+.pool small {
+  font-size: 11px;
+  color: var(--rx-muted);
+}
+.pool .note {
+  margin: 0;
+}
+@container (max-width: 480px) {
+  .pools {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .page p {
   color: var(--rx-soft);
   font-size: 13px;
 }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+.card {
+  padding: 24px;
+  min-width: 0;
+  background: var(--rx-paper);
+  border: 1px solid var(--rx-line);
+}
+.card h2 {
+  font-size: 19px;
+  margin: 12px 0;
+}
+.note {
+  margin: 0;
+}
+@container (max-width: 480px) {
+  .pools {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.page p {
+  color: var(--rx-soft);
+  font-size: 13px;
 }
 .card {
   padding: 24px;
@@ -103,9 +208,6 @@
   padding-left: 18px;
 }
 @media (max-width: 700px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
   .card {
     padding: 20px 16px;
   }

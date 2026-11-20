@@ -207,38 +207,6 @@
   font-size: 12px;
   color: var(--rx-soft);
 }
-.ticker {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  background: var(--rx-paper);
-  border: 1px solid var(--rx-line);
-}
-.ticker > div {
-  padding: 16px;
-  min-width: 0;
-  border-right: 1px solid var(--rx-line);
-}
-.ticker > div:last-child {
-  border-right: 0;
-}
-.ticker dt {
-  font-size: 10px;
-  color: var(--rx-soft);
-  margin-bottom: 6px;
-}
-.ticker dd {
-  margin: 0;
-  font:
-    16px var(--rx-font-mono),
-    monospace;
-  overflow-wrap: anywhere;
-}
-.ticker small {
-  display: block;
-  font-size: 10px;
-  margin-top: 6px;
-}
 .orderEntry {
   grid-area: entry;
   display: grid;
@@ -298,29 +266,6 @@
 .latencyNote {
   font-size: 11px;
   color: var(--rx-soft);
-}
-@container (max-width: 899px) {
-  .ticker {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .ticker > div:nth-child(-n + 3) {
-    border-bottom: 1px solid var(--rx-line);
-  }
-}
-@container (max-width: 480px) {
-  .ticker {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .ticker > div {
-    padding: 12px;
-    border-bottom: 1px solid var(--rx-line);
-  }
-  .ticker > div:nth-last-child(-n + 2) {
-    border-bottom: 0;
-  }
-  .ticker dd {
-    font-size: 14px;
-  }
 }
 @media (max-width: 480px) {
   .form,

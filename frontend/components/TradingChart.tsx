@@ -52,12 +52,13 @@ type Props = {
   setGranularity: (value: Granularity) => void;
   trigger: DestinationId;
   spot?: number;
-  kind: string;
-  lower: string;
-  upper: string;
-  trail: string;
-  setLower: (value: string) => void;
-  setUpper: (value: string) => void;
+  /** Draft order to draw; omit on view-only charts (no draggable levels). */
+  kind?: string;
+  lower?: string;
+  upper?: string;
+  trail?: string;
+  setLower?: (value: string) => void;
+  setUpper?: (value: string) => void;
   orders: OrderRow[];
 };
 type Draft = { key: 'lower' | 'upper'; price: number; line: IPriceLine };
@@ -236,7 +237,7 @@ export default function TradingChart(props: Props) {
         }
         const setter =
           state.dragging.key === 'lower' ? latest.current.setLower : latest.current.setUpper;
-        setter(value);
+        setter?.(value);
       }
       event.preventDefault();
       event.stopPropagation();
@@ -358,8 +359,8 @@ export default function TradingChart(props: Props) {
     if (validPrice(props.spot))
       line(props.spot, `${props.trigger === 1301 ? 'UNI' : 'BASE'} Pool`, LineStyle.Solid);
     for (const [key, title, enabled, price] of [
-      ['lower', 'Stop · drag', ['stop', 'bracket'].includes(props.kind), Number(props.lower)],
-      ['upper', 'Take · drag', ['take', 'bracket'].includes(props.kind), Number(props.upper)],
+      ['lower', 'Stop · drag', ['stop', 'bracket'].includes(props.kind ?? ''), Number(props.lower)],
+      ['upper', 'Take · drag', ['take', 'bracket'].includes(props.kind ?? ''), Number(props.upper)],
     ] as const) {
       if (enabled && validPrice(price))
         state.drafts.push({ key, price, line: line(price, title, LineStyle.LargeDashed) });
@@ -410,7 +411,7 @@ export default function TradingChart(props: Props) {
           ref={container}
           className={styles.canvas}
           role="img"
-          aria-label={`ETH/USD ${timeframes.find(([g]) => g === props.granularity)?.[1]} candles and volume. ${chains[props.trigger].name} trigger pool ${props.spot ?? 'unavailable'} rdUSD per rdETH. ${props.kind} order: stop ${props.lower || 'unset'}, take ${props.upper || 'unset'}. Drag Stop or Take lines, or use the labelled price inputs.`}
+          aria-label={`ETH/USD ${timeframes.find(([g]) => g === props.granularity)?.[1]} candles and volume. ${chains[props.trigger].name} trigger pool ${props.spot ?? 'unavailable'} rdUSD per rdETH. ${props.kind ? `${props.kind} order: stop ${props.lower || 'unset'}, take ${props.upper || 'unset'}. Drag Stop or Take lines, or use the labelled price inputs.` : ''}`}
         />
         {(message || !props.snapshot?.candles.length) && (
           <p className={styles.overlay} role="status">
@@ -420,7 +421,11 @@ export default function TradingChart(props: Props) {
       </div>
       <div className={styles.legend}>
         <span>Hollow up / filled down · Coinbase ETH/USD · UTC</span>
-        <span>Dotted: trigger pool · Drag dashed draft levels or edit price inputs</span>
+        <span>
+          {props.kind
+            ? 'Dotted: trigger pool · Drag dashed draft levels or edit price inputs'
+            : 'Dotted: demo pool swaps'}
+        </span>
         {props.kind === 'trail' && (
           <span>
             Trail preview uses current pool spot; active trailing orders follow their tracked peak.

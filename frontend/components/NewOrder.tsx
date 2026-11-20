@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useAccount, usePublicClient, useSwitchChain } from 'wagmi';
 import { erc20Abi, parseEther, type Hash } from 'viem';
 import { chains, type DestinationId } from '@/lib/chains';
-import { formatAmount, formatPrice } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import { deployments } from '@/lib/deployments';
 import { executorWriteAbi } from '@/lib/write-abi';
 import { useFeed } from '@/lib/feed';
@@ -17,6 +17,7 @@ import { useCandles } from '@/lib/use-candles';
 import { useMarket } from '@/lib/use-market';
 import type { Granularity } from '@/lib/server-candles';
 import TradingOrders from './TradingOrders';
+import MarketTicker from './MarketTicker';
 import NewOrderPreview from './NewOrderPreview';
 import NewOrderFields from './NewOrderFields';
 import { createdOrderId, useNewOrderReads } from './NewOrderReads';
@@ -213,50 +214,22 @@ export default function NewOrder() {
   const [granularity, setGranularity] = useState<Granularity>(60);
   const candles = useCandles(granularity);
   const { market, error: marketError } = useMarket(trigger);
-  const stats = candles.snapshot?.stats;
   const mine = useMemo(
     () => feed.orders.filter((row) => row.owner.toLowerCase() === account.address?.toLowerCase()),
     [feed.orders, account.address],
   );
-  const percent = (value: number | undefined) =>
-    value === undefined || !Number.isFinite(value)
-      ? '—'
-      : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   return (
     <div className={styles.page}>
       <div className={styles.heading}>
         <h1>New order</h1>
         <p>Price triggers watch the {chains[trigger].name} pool.</p>
       </div>
-      <dl className={styles.ticker} aria-label="ETH/USD market ticker">
-        <div>
-          <dt>ETH / USD · Coinbase</dt>
-          <dd>{stats ? formatPrice(stats.last) : '—'}</dd>
-        </div>
-        <div>
-          <dt>24h change</dt>
-          <dd>{percent(stats ? (stats.last / stats.open - 1) * 100 : undefined)}</dd>
-        </div>
-        <div>
-          <dt>24h high</dt>
-          <dd>{stats ? formatPrice(stats.high) : '—'}</dd>
-        </div>
-        <div>
-          <dt>24h low</dt>
-          <dd>{stats ? formatPrice(stats.low) : '—'}</dd>
-        </div>
-        <div>
-          <dt>{trigger === 1301 ? 'Unichain' : 'Base'} pool · rdUSD</dt>
-          <dd>
-            {spot ? formatPrice(spot) : '—'}
-            {triggerStale && <small>Stale / unavailable</small>}
-          </dd>
-        </div>
-        <div>
-          <dt>Pool vs market</dt>
-          <dd>{percent(stats && spot ? (spot / stats.last - 1) * 100 : undefined)}</dd>
-        </div>
-      </dl>
+      <MarketTicker
+        stats={candles.snapshot?.stats}
+        chainId={trigger}
+        spot={spot}
+        stale={triggerStale}
+      />
       <div className={styles.layout}>
         <div className={styles.chartArea}>
           <TradingChart

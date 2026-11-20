@@ -13,10 +13,21 @@ import { useTransaction } from '@/lib/transactions';
 import { ConnectWallet } from './WalletCard';
 import styles from './Market.module.css';
 import { Corners } from './Shared';
-export function MarketSwap() {
+// Widest liquidity position (SetupPriceBot.s.sol, rdETH is currency1 on both pools):
+// rdETH ≈ 500–10,000 rdUSD. The original ±4800-tick seed around 3,000 is narrower.
+const WIDE_TICK_LOWER = -92160;
+const WIDE_TICK_UPPER = -62100;
+export function MarketSwap({
+  chain,
+  onChainChange,
+}: {
+  /** Controlled chain, so a surrounding chart follows the pool being swapped. */
+  chain?: DestinationId;
+  onChainChange?: (chainId: DestinationId) => void;
+} = {}) {
   const { address, chainId: walletChain } = useAccount();
   const [selected, setSelected] = useState<DestinationId>();
-  const chainId = selected ?? (walletChain === 84532 ? 84532 : 1301);
+  const chainId = chain ?? selected ?? (walletChain === 84532 ? 84532 : 1301);
   const [sellEth, setSellEth] = useState(true),
     [amount, setAmount] = useState('1');
   const [result, setResult] = useState<{ hash: Hash; chainId: DestinationId; price?: number }>();
@@ -57,10 +68,9 @@ export function MarketSwap() {
   if (!error && balance !== undefined && value > balance) error = `Insufficient ${symbol} balance.`;
   const system = systems[chainId];
   const stale = isSystemStale(system, now, errors[chainId]);
-  const centre = -Math.trunc(Math.log(3000) / Math.log(1.0001) / 60) * 60;
-  const edgePrices = [1 / 1.0001 ** (centre - 4800), 1 / 1.0001 ** (centre + 4800)];
+  const edgePrices = [tickPrice(WIDE_TICK_UPPER), tickPrice(WIDE_TICK_LOWER)];
   const nearEdge = system && edgePrices.some((edge) => Math.abs(system.price - edge) / edge <= 0.1);
-  const outOfRange = system && Math.abs(system.tick - centre) >= 4800;
+  const outOfRange = system && (system.tick <= WIDE_TICK_LOWER || system.tick >= WIDE_TICK_UPPER);
   const approved = allowance !== undefined && allowance >= value;
   const unavailable = reads.isError || reads.data?.some((read) => read.status === 'failure');
   const submit = async () => {
@@ -128,7 +138,11 @@ export function MarketSwap() {
           <select
             value={chainId}
             disabled={busy}
-            onChange={(event) => setSelected(Number(event.target.value) as DestinationId)}
+            onChange={(event) => {
+              const next = Number(event.target.value) as DestinationId;
+              setSelected(next);
+              onChainChange?.(next);
+            }}
           >
             <option value={1301}>Unichain Sepolia</option>
             <option value={84532}>Base Sepolia</option>
