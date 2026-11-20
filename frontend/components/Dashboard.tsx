@@ -160,13 +160,16 @@ export default function Dashboard({
                   ? 'Syncing history'
                   : `${feed.orders.length} observed · both executors`}
               </span>
+              <ul className={`mono ${styles.scanList}`} aria-label="Scan status per chain">
+                {Object.entries(feed.chainLoading).map(([id, loading]) => (
+                  <li key={id}>
+                    <i className={`dot ${loading ? 'pending' : 'live'}`} />
+                    {id === '1301' ? 'Unichain' : id === '84532' ? 'Base' : 'Lasna'} ·{' '}
+                    {loading ? 'syncing' : 'settled'}
+                  </li>
+                ))}
+              </ul>
             </div>
-            {Object.entries(feed.chainLoading).map(([id, loading]) => (
-              <p className={`mono ${styles.bottomNote}`} key={id}>
-                {id === '1301' ? 'Unichain' : id === '84532' ? 'Base' : 'Lasna'} ·{' '}
-                {loading ? 'syncing history' : 'scan settled'}
-              </p>
-            ))}
             {feed.loading && (
               <div className={styles.notice} role="status">
                 <strong>Following the event trail.</strong>

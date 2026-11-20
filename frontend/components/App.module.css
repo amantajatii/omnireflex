@@ -172,7 +172,7 @@
 .switcher button + button {
   border-left: 1px solid var(--rx-line-strong);
 }
-.switcher button:hover:not(:disabled) {
+.switcher button:not([aria-pressed='true']):hover:not(:disabled) {
   color: var(--rx-ink);
 }
 .switcher button[aria-pressed='true'] {

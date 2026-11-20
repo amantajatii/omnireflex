@@ -1,5 +1,5 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
@@ -81,6 +81,9 @@ function Rail({ close }: { close?: () => void }) {
               <Link
                 key={href}
                 href={href}
+                // Next would scroll the new page's first element into view, leaving the page
+                // offset by the shell padding; AppShell resets to the very top instead.
+                scroll={false}
                 onClick={close}
                 aria-current={path === href ? 'page' : undefined}
               >
@@ -103,6 +106,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false),
     path = usePathname();
   const modal = useModal(open, () => setOpen(false));
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [path]);
   const title =
     groups
       .flatMap(([, links]) => [...links] as readonly (readonly [string, string])[])

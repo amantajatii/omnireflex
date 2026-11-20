@@ -172,6 +172,21 @@
   color: var(--rx-soft);
   margin-top: 26px;
 }
+.scanList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 10.5px;
+  color: var(--rx-soft);
+}
+.scanList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
 @media (max-width: 1050px) {
   .overview {
     align-items: start;
