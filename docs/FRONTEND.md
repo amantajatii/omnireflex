@@ -92,12 +92,11 @@ The right half of the hero holds a generative "ink sculpture": a stippled 3D poi
 ### Shape
 
 - Built from a seeded PRNG.
-- **Loops:** 3–4 closed, wobbly ring curves on random planes around the origin, radius about 0.9–1.06. Each ring's radius and height are modulated by a few sine harmonics, and its tube width varies along the curve.
+- **Loops:** 4–6 closed, wobbly ring curves on random planes around the origin, radius about 0.8–1.04. Each ring's radius and height are modulated by a few sine harmonics, and its width tapers like a brush stroke, from hairline runs to a few broad swells.
 - **Bridges:** 2–3 bowed curves connecting points on different loops, thickest in the middle.
 - **Core points:** resample all curves by arc length into a fixed count of about 2,800.
-- **Grain:** about 16,000 points scattered inside and just past each tube's skin, with about 5 % looser dust.
-- **Spikes:** about 16 thin needle lines bristling outward.
-- **Glass sphere:** a sphere of radius about 0.3 at the centre, drawn as a subtle outlined disc with a highlight. Inside it, render an inverted, shrunken copy of the grains behind it, so it reads as a lens.
+- **Grain:** about 16,000 points along each ribbon's edges, falling off outward into a stippled halo, with a share of looser dust further out.
+- **Glass sphere:** a glossy sphere at the centre, shaded from a lit upper-left to a shadowed body with a faint bright rim, plus a highlight. Inside it, render an inverted, shrunken copy of the ribbons behind it, so it reads as a lens.
 
 ### Rendering
 
@@ -116,7 +115,7 @@ The right half of the hero holds a generative "ink sculpture": a stippled 3D poi
 ### Overlays (mono, `faint`)
 
 - Top: a row of tick labels.
-- Bottom-left: `drag · click to reforge`.
+- Bottom-left: `Drag to rotate · Click to reforge`.
 - Bottom-right: `seed 0x…`.
 
 ### OmniReflex twist

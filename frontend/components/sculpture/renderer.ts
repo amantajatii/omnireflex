@@ -1,7 +1,6 @@
 import { project, type Shape } from './geometry';
 const CORE = 2800,
   GRAIN_END = CORE + 16000,
-  TOTAL = GRAIN_END + 32,
   BUCKETS = 96;
 function channel(hex: string, index: number) {
   const value = hex.slice(1);
@@ -13,20 +12,17 @@ function channel(hex: string, index: number) {
 function mixColour(ink: string, paper: string, mix: number) {
   return `rgb(${Math.round(channel(ink, 0) * (1 - mix) + channel(paper, 0) * mix)},${Math.round(channel(ink, 1) * (1 - mix) + channel(paper, 1) * mix)},${Math.round(channel(ink, 2) * (1 - mix) + channel(paper, 2) * mix)})`;
 }
-function rgba(hex: string, alpha: number) {
-  return `rgba(${channel(hex, 0)},${channel(hex, 1)},${channel(hex, 2)},${alpha})`;
-}
 export function createRenderer(ctx: CanvasRenderingContext2D) {
-  const x = new Float32Array(TOTAL),
-    y = new Float32Array(TOTAL),
-    z = new Float32Array(TOTAL),
-    perspective = new Float32Array(TOTAL);
+  const x = new Float32Array(GRAIN_END),
+    y = new Float32Array(GRAIN_END),
+    z = new Float32Array(GRAIN_END),
+    perspective = new Float32Array(GRAIN_END);
   const tx = new Float32Array(CORE),
     ty = new Float32Array(CORE),
     ox = new Float32Array(CORE),
     oy = new Float32Array(CORE);
   const previous = new Int32Array(CORE),
-    links = new Int32Array(TOTAL),
+    links = new Int32Array(GRAIN_END),
     heads = new Int32Array(BUCKETS);
   const view = { x, y, z, perspective, tx, ty, ox, oy, previous };
   const colours = new Array<string>(BUCKETS),
@@ -81,8 +77,8 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
         : group === 1
           ? 0.16
           : group === 2
-            ? 0.2
-            : 0.065;
+            ? 0.3
+            : 0.42;
     ctx.fillStyle = group === 1 ? paper : colours[bucket];
     ctx.beginPath();
     for (let i = heads[bucket]; i !== -1; i = links[i])
@@ -91,7 +87,7 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
           mode = g % 12,
           kind = mode < 9 ? 0 : mode - 8;
         if (kind !== group) continue;
-        const radius = Math.max(0.3, Math.min(0.6, shape.grainStyle[g * 4 + 2] * perspective[i]));
+        const radius = Math.max(0.4, Math.min(1.1, shape.grainStyle[g * 4 + 2] * perspective[i]));
         ctx.moveTo(x[i] + radius, y[i]);
         ctx.arc(x[i], y[i], radius, 0, Math.PI * 2);
       }
@@ -120,17 +116,6 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
       if (!glass) for (let group = 0; group < 4; group++) grain(shape, bucket, group, paper);
     }
   }
-  function needles(front: boolean) {
-    ctx.globalAlpha = 0.3;
-    ctx.lineWidth = 0.45;
-    ctx.beginPath();
-    for (let i = GRAIN_END; i < TOTAL; i += 2)
-      if (z[i] + z[i + 1] >= 0 === front) {
-        ctx.moveTo(x[i], y[i]);
-        ctx.lineTo(x[i + 1], y[i + 1]);
-      }
-    ctx.stroke();
-  }
   return function draw(
     shape: Shape,
     width: number,
@@ -146,7 +131,7 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, width, height);
     const cx = width / 2,
       cy = height / 2,
-      radius = Math.min(width, height) * 0.425 * 0.22;
+      radius = Math.min(width, height) * 0.425 * 0.3;
     if (
       width !== lastWidth ||
       height !== lastHeight ||
@@ -167,9 +152,11 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
         cy,
         radius,
       );
-      gradient.addColorStop(0, rgba(raise, 0.55));
-      gradient.addColorStop(0.65, rgba(paper, 0.6));
-      gradient.addColorStop(1, rgba(paper, 0.7));
+      // Glossy glass: lit upper-left, shadowed body, faint bright rim.
+      gradient.addColorStop(0, mixColour(ink, paper, 0.42));
+      gradient.addColorStop(0.55, mixColour(ink, raise, 0.8));
+      gradient.addColorStop(0.88, mixColour(ink, paper, 0.86));
+      gradient.addColorStop(1, mixColour(ink, paper, 0.62));
       highlight = ctx.createRadialGradient(
         cx - radius * 0.33,
         cy - radius * 0.36,
@@ -195,8 +182,6 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
       heads[bucket] = i;
     }
     bands(shape, 0, BUCKETS / 2, cx, cy, paper);
-    ctx.strokeStyle = ink;
-    needles(false);
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -210,8 +195,8 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(cx - radius * 0.33, cy - radius * 0.36, radius * 0.25, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = ink;
-    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = mixColour(ink, paper, 0.15);
+    ctx.globalAlpha = 0.55;
     ctx.beginPath();
     for (let i = 0; i < CORE; i++)
       if (shape.next[i] >= 0 && z[i] + z[shape.next[i]] < 0) ribbon(shape, i, true, cx, cy);
@@ -236,8 +221,6 @@ export function createRenderer(ctx: CanvasRenderingContext2D) {
     ctx.arc(cx, cy, radius * 0.88, Math.PI * 0.1, Math.PI * 0.65);
     ctx.stroke();
     bands(shape, BUCKETS / 2, BUCKETS, cx, cy, paper);
-    ctx.strokeStyle = ink;
-    needles(true);
     ctx.globalAlpha = 1;
   };
 }

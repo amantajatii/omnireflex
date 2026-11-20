@@ -87,7 +87,7 @@ OrderExecuted. Missing Lasna logs remain explicitly unobserved. Failed latency s
 healthy samples. Optional indexer errors/404s fall back silently; missing indexer T1 shows an em dash
 rather than mixing seconds into a millisecond timeline. Cross-chain block times can skew by ~1 s.
 
-The sculpture renders width-varying filled ribbons, edge stipple/dust, long needles and a shaded
+The sculpture renders width-varying filled ribbons, edge stipple/dust and a shaded
 central lens. Projection/depth buffers and morph buffers are reused across frames. Drag, inertia,
 heading, keyboard, instant reduced-motion reforges and new-execution reforges are retained.
 

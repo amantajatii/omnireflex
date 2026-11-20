@@ -2,7 +2,6 @@ export type Point = [number, number, number];
 export type Shape = {
   core: Point[];
   grains: Point[];
-  spikes: [Point, Point][];
   widths: Float32Array;
   next: Int32Array;
   grainStyle: Float32Array;
@@ -28,25 +27,28 @@ const cross = (a: Point, b: Point): Point => [
 export function makeShape(seed: number): Shape {
   const r = random(seed),
     curves: { points: Point[]; widths: number[] }[] = [];
-  const loops = 3 + (r() > 0.5 ? 1 : 0);
+  const loops = 4 + Math.floor(r() * 3);
   for (let ring = 0; ring < loops; ring++) {
     const normal = unit([r() * 2 - 1, r() * 2 - 1, r() * 2 - 1]);
     const u = unit(cross(normal, Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])),
       v = cross(normal, u);
-    const radius = 0.9 + r() * 0.16,
+    const radius = 0.8 + r() * 0.24,
       phase = r() * Math.PI * 2,
+      lobes = 2 + Math.floor(r() * 2),
+      thickness = 0.014 + r() * 0.026,
       points: Point[] = [],
       widths: number[] = [];
     for (let j = 0; j <= 360; j++) {
       const t = (j / 360) * Math.PI * 2;
-      const rad = radius + 0.13 * Math.sin(t * 3 + phase) + 0.065 * Math.cos(t * 5 - phase);
+      const rad = radius + 0.12 * Math.sin(t * 3 + phase) + 0.06 * Math.cos(t * 5 - phase);
       points.push(
         add(
           add(mul(u, Math.cos(t) * rad), mul(v, Math.sin(t) * rad)),
-          mul(normal, 0.16 * Math.sin(t * 2 + phase)),
+          mul(normal, 0.18 * Math.sin(t * 2 + phase)),
         ),
       );
-      widths.push(0.008 + 0.052 * (0.5 + 0.5 * Math.sin(t * 3 + phase)) ** 1.2);
+      // Brush-like taper: long hairline runs that swell into a few broad strokes.
+      widths.push(0.0025 + thickness * (0.5 + 0.5 * Math.sin(t * lobes + phase)) ** 2.2);
     }
     curves.push({ points, widths });
   }
@@ -59,7 +61,7 @@ export function makeShape(seed: number): Shape {
     for (let j = 0; j <= 120; j++) {
       const t = j / 120;
       points.push(add(add(mul(a, 1 - t), mul(b, t)), mul(bow, Math.sin(t * Math.PI))));
-      widths.push(0.008 + 0.048 * Math.sin(t * Math.PI));
+      widths.push(0.0025 + 0.02 * Math.sin(t * Math.PI) ** 2);
     }
     curves.push({ points, widths });
   }
@@ -115,28 +117,22 @@ export function makeShape(seed: number): Shape {
     const mode = i % 12,
       side = i & 1 ? 1 : -1,
       at = i * 4;
-    grainStyle[at] = mode < 9 ? side * (0.9 + r() * 0.24) : mode === 11 ? side : r() * 1.6 - 0.8;
+    grainStyle[at] = mode < 9 ? side * (0.92 + r() ** 2.5 * 1.6) : mode === 11 ? side : r() * 1.6 - 0.8;
     grainStyle[at + 1] = (r() - 0.5) * 0.008;
-    grainStyle[at + 2] = 0.3 + r() * 0.3;
-    grainStyle[at + 3] = mode === 11 ? side * (1 + r() * 3) : 0;
+    grainStyle[at + 2] = 0.45 + r() * 0.55;
+    grainStyle[at + 3] = mode === 11 ? side * (1 + r() * 9) : 0;
     const angle = r() * Math.PI * 2,
-      radius = widths[k] * (r() < 0.05 ? 1.5 + r() * 2.5 : 0.85 + r() * 0.35);
+      radius = widths[k] * (r() < 0.1 ? 1.4 + r() * 3 : 0.85 + r() * 0.4);
     grains.push(
       add(core[k], add(mul(u, Math.cos(angle) * radius), mul(v, Math.sin(angle) * radius))),
     );
   }
-  const spikes: [Point, Point][] = [];
-  for (let i = 0; i < 16; i++) {
-    const a = core[Math.floor(r() * core.length)];
-    spikes.push([a, mul(a, 1.3 + r() * 0.55)]);
-  }
-  return { core, grains, spikes, widths: Float32Array.from(widths), next, grainStyle };
+  return { core, grains, widths: Float32Array.from(widths), next, grainStyle };
 }
 export function cloneShape(shape: Shape): Shape {
   return {
     core: shape.core.map((p) => [...p]),
     grains: shape.grains.map((p) => [...p]),
-    spikes: shape.spikes.map(([a, b]) => [[...a], [...b]]),
     widths: shape.widths.slice(),
     next: shape.next.slice(),
     grainStyle: shape.grainStyle.slice(),
@@ -153,10 +149,6 @@ export function blendInto(a: Shape, b: Shape, t: number, out: Shape) {
       out.grains[i][j] = a.grains[i][j] + (b.grains[i][j] - a.grains[i][j]) * t;
   for (let i = 0; i < a.grainStyle.length; i++)
     out.grainStyle[i] = a.grainStyle[i] + (b.grainStyle[i] - a.grainStyle[i]) * t;
-  for (let i = 0; i < a.spikes.length; i++)
-    for (let k = 0; k < 2; k++)
-      for (let j = 0; j < 3; j++)
-        out.spikes[i][k][j] = a.spikes[i][k][j] + (b.spikes[i][k][j] - a.spikes[i][k][j]) * t;
 }
 export function blend(a: Shape, b: Shape, t: number): Shape {
   const out = cloneShape(a);
@@ -177,9 +169,7 @@ export function project(
   pitch: number,
 ) {
   const { x, y, z, perspective, tx, ty, ox, oy, previous } = view;
-  const core = shape.core.length,
-    grainEnd = core + shape.grains.length,
-    total = grainEnd + shape.spikes.length * 2;
+  const core = shape.core.length;
   const cosineYaw = Math.cos(yaw),
     sineYaw = Math.sin(yaw),
     cosinePitch = Math.cos(pitch),
@@ -189,9 +179,8 @@ export function project(
     minY = Infinity,
     maxY = -Infinity;
   previous.fill(-1);
-  for (let i = 0; i < total; i++) {
-    if (i >= core && i < grainEnd) continue;
-    const point = i < core ? shape.core[i] : shape.spikes[(i - grainEnd) >> 1][(i - grainEnd) & 1];
+  for (let i = 0; i < core; i++) {
+    const point = shape.core[i];
     const px = point[0] * cosineYaw + point[2] * sineYaw,
       pz = point[2] * cosineYaw - point[0] * sineYaw;
     const py = point[1] * cosinePitch - pz * sinePitch,
@@ -201,27 +190,24 @@ export function project(
     y[i] = py * p;
     z[i] = depth;
     perspective[i] = p;
-    if (i < core) {
-      const half = shape.widths[i] * p;
-      minX = Math.min(minX, x[i] - half);
-      maxX = Math.max(maxX, x[i] + half);
-      minY = Math.min(minY, y[i] - half);
-      maxY = Math.max(maxY, y[i] + half);
-      if (shape.next[i] >= 0) previous[shape.next[i]] = i;
-    }
+    const half = shape.widths[i] * p;
+    minX = Math.min(minX, x[i] - half);
+    maxX = Math.max(maxX, x[i] + half);
+    minY = Math.min(minY, y[i] - half);
+    maxY = Math.max(maxY, y[i] + half);
+    if (shape.next[i] >= 0) previous[shape.next[i]] = i;
   }
-  // Fit the ink, excluding needles/dust, without clipping unusually asymmetric seeds.
+  // Fit the ink, excluding dust, without clipping unusually asymmetric seeds.
   const side = Math.min(width, height),
     extent = Math.max(maxX - minX, maxY - minY, 0.1);
   const scale = Math.min(
     (0.85 * side) / extent,
     (0.48 * side) / Math.max(Math.abs(minX), Math.abs(maxX), Math.abs(minY), Math.abs(maxY), 0.1),
   );
-  for (let i = 0; i < total; i++)
-    if (i < core || i >= grainEnd) {
-      x[i] = width / 2 + x[i] * scale;
-      y[i] = height / 2 + y[i] * scale;
-    }
+  for (let i = 0; i < core; i++) {
+    x[i] = width / 2 + x[i] * scale;
+    y[i] = height / 2 + y[i] * scale;
+  }
   for (let i = 0; i < core; i++) {
     const before = previous[i],
       after = shape.next[i];

@@ -253,7 +253,7 @@ export default function Sculpture({
         }}
       />
       <div className={`mono ${styles.bottom}`}>
-        <span>drag · click to reforge</span>
+        <span>Drag to rotate · Click to reforge</span>
         <span
           className={flash ? styles.flash : ''}
           key={seed}

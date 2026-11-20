@@ -24,7 +24,6 @@ const a = makeShape(42),
 assert.deepEqual(makeShape(42), a);
 assert.equal(a.grains.length, 16000);
 assert.equal(a.core.length, 2800);
-assert.equal(a.spikes.length, 16);
 assert(a.grains.every((p) => p.every(Number.isFinite)));
 assert.deepEqual(blend(a, b, 0), a);
 for (const [i, point] of blend(a, b, 1).grains.entries())
