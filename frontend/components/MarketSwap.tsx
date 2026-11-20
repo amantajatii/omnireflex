@@ -11,6 +11,7 @@ import { tickPrice } from '@/lib/model';
 import { formatAmount, formatNumber, formatPrice } from '@/lib/format';
 import { useTransaction } from '@/lib/transactions';
 import { ConnectWallet } from './WalletCard';
+import Select from './Select';
 import styles from './Market.module.css';
 import { Corners } from './Shared';
 // Widest liquidity position (SetupPriceBot.s.sol, rdETH is currency1 on both pools):
@@ -133,36 +134,33 @@ export function MarketSwap({
           void submit();
         }}
       >
-        <label>
-          Chain
-          <select
-            value={chainId}
-            disabled={busy}
-            onChange={(event) => {
-              const next = Number(event.target.value) as DestinationId;
-              setSelected(next);
-              onChainChange?.(next);
-            }}
-          >
-            <option value={1301}>Unichain Sepolia</option>
-            <option value={84532}>Base Sepolia</option>
-          </select>
-        </label>
-        <label>
-          Direction
-          <select
-            value={sellEth ? 'eth' : 'usd'}
-            disabled={busy}
-            onChange={(event) => {
-              const eth = event.target.value === 'eth';
-              setSellEth(eth);
-              setAmount(eth ? '1' : '3000');
-            }}
-          >
-            <option value="eth">Sell rdETH for rdUSD</option>
-            <option value="usd">Sell rdUSD for rdETH</option>
-          </select>
-        </label>
+        <Select<DestinationId>
+          label="Chain"
+          value={chainId}
+          disabled={busy}
+          options={[
+            { value: 1301, label: 'Unichain Sepolia' },
+            { value: 84532, label: 'Base Sepolia' },
+          ]}
+          onChange={(next) => {
+            setSelected(next);
+            onChainChange?.(next);
+          }}
+        />
+        <Select
+          label="Direction"
+          value={sellEth ? 'eth' : 'usd'}
+          disabled={busy}
+          options={[
+            { value: 'eth', label: 'Sell rdETH for rdUSD' },
+            { value: 'usd', label: 'Sell rdUSD for rdETH' },
+          ]}
+          onChange={(next) => {
+            const eth = next === 'eth';
+            setSellEth(eth);
+            setAmount(eth ? '1' : '3000');
+          }}
+        />
         <label>
           Amount ({symbol})
           <input

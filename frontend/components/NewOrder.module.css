@@ -24,10 +24,6 @@
   .orderEntry {
     position: sticky;
     top: 16px;
-    max-height: calc(100dvh - 32px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
   }
 }
 @container (min-width: 1500px) {
@@ -100,18 +96,24 @@
   padding: 7px 9px;
   font-size: 12px;
 }
-.chips.kinds {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.form .condition {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  cursor: pointer;
 }
-.chips.kinds button {
-  padding-inline: 4px;
-  white-space: nowrap;
+.form .condition input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: var(--rx-ink);
 }
 .pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
   align-items: start;
 }
 .hint {

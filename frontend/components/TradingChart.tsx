@@ -1,4 +1,5 @@
 'use client';
+import type { ExitConditions } from '@/lib/order-encoding';
 import { useEffect, useRef, useState } from 'react';
 import {
   CandlestickSeries,
@@ -53,7 +54,8 @@ type Props = {
   trigger: DestinationId;
   spot?: number;
   /** Draft order to draw; omit on view-only charts (no draggable levels). */
-  kind?: string;
+  exits?: ExitConditions;
+  side?: 'eth' | 'usd';
   lower?: string;
   upper?: string;
   trail?: string;
@@ -359,14 +361,24 @@ export default function TradingChart(props: Props) {
     if (validPrice(props.spot))
       line(props.spot, `${props.trigger === 1301 ? 'UNI' : 'BASE'} Pool`, LineStyle.Solid);
     for (const [key, title, enabled, price] of [
-      ['lower', 'Stop · drag', ['stop', 'bracket'].includes(props.kind ?? ''), Number(props.lower)],
-      ['upper', 'Take · drag', ['take', 'bracket'].includes(props.kind ?? ''), Number(props.upper)],
+      [
+        'lower',
+        props.side === 'usd' ? 'Dip · drag' : 'Stop · drag',
+        props.exits?.stop,
+        Number(props.lower),
+      ],
+      [
+        'upper',
+        props.side === 'usd' ? 'Breakout · drag' : 'Take · drag',
+        props.exits?.take,
+        Number(props.upper),
+      ],
     ] as const) {
       if (enabled && validPrice(price))
         state.drafts.push({ key, price, line: line(price, title, LineStyle.LargeDashed) });
     }
     const trail = Number(props.trail);
-    if (props.kind === 'trail' && validPrice(props.spot) && trail > 0 && trail < 100)
+    if (props.exits?.trail && validPrice(props.spot) && trail > 0 && trail < 100)
       line(props.spot * (1 - trail / 100), 'Trail · indicative', LineStyle.LargeDashed);
     for (const order of props.orders) {
       if (order.status === 'Open' && order.triggerChain === props.trigger)
@@ -386,7 +398,16 @@ export default function TradingChart(props: Props) {
         };
       },
     });
-  }, [props.spot, props.kind, props.lower, props.upper, props.trail, props.orders, props.trigger]);
+  }, [
+    props.spot,
+    props.exits,
+    props.side,
+    props.lower,
+    props.upper,
+    props.trail,
+    props.orders,
+    props.trigger,
+  ]);
 
   const message = chartError || props.error || props.snapshot?.error;
   return (
@@ -411,7 +432,7 @@ export default function TradingChart(props: Props) {
           ref={container}
           className={styles.canvas}
           role="img"
-          aria-label={`ETH/USD ${timeframes.find(([g]) => g === props.granularity)?.[1]} candles and volume. ${chains[props.trigger].name} trigger pool ${props.spot ?? 'unavailable'} rdUSD per rdETH. ${props.kind ? `${props.kind} order: stop ${props.lower || 'unset'}, take ${props.upper || 'unset'}. Drag Stop or Take lines, or use the labelled price inputs.` : ''}`}
+          aria-label={`ETH/USD ${timeframes.find(([g]) => g === props.granularity)?.[1]} candles and volume. ${chains[props.trigger].name} trigger pool ${props.spot ?? 'unavailable'} rdUSD per rdETH. ${props.exits ? [props.exits.stop && `${props.side === 'usd' ? 'Dip' : 'Stop'} ${props.lower || 'unset'}.`, props.exits.take && `${props.side === 'usd' ? 'Breakout' : 'Take'} ${props.upper || 'unset'}.`, props.exits.trail && `Trailing stop ${props.trail}% from peak, indicative.`].filter(Boolean).join(' ') + ' Drag dashed price levels, or use the labelled price inputs.' : ''}`}
         />
         {(message || !props.snapshot?.candles.length) && (
           <p className={styles.overlay} role="status">
@@ -422,11 +443,11 @@ export default function TradingChart(props: Props) {
       <div className={styles.legend}>
         <span>Hollow up / filled down · Coinbase ETH/USD · UTC</span>
         <span>
-          {props.kind
-            ? 'Dotted: trigger pool · Drag dashed draft levels or edit price inputs'
+          {props.exits
+            ? `Dotted: trigger pool · Drag ${props.side === 'usd' ? 'Dip / Breakout' : 'Stop / Take'} draft levels or edit price inputs`
             : 'Dotted: demo pool swaps'}
         </span>
-        {props.kind === 'trail' && (
+        {props.exits?.trail && (
           <span>
             Trail preview uses current pool spot; active trailing orders follow their tracked peak.
           </span>

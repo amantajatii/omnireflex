@@ -1,24 +1,14 @@
+import type { ExitConditions } from '@/lib/order-encoding';
 import { formatEther } from 'viem';
 import { formatAmount, formatPrice } from '@/lib/format';
 import { chains, destinationIds, type DestinationId } from '@/lib/chains';
+import Select from './Select';
 import styles from './NewOrder.module.css';
-const kinds = {
-  stop: 'Stop-loss',
-  take: 'Take-profit',
-  bracket: 'Bracket (OCO)',
-  trail: 'Trailing',
-};
-const descriptions = {
-  stop: 'Exit when rdETH falls to your price.',
-  take: 'Exit when rdETH reaches your target.',
-  bracket: 'Two triggers. The first one closes the order.',
-  trail: 'Follow the peak and exit after a retreat.',
-};
 type Props = {
   execution: DestinationId;
   trigger: DestinationId;
-  kind: keyof typeof kinds;
-  setKind: (v: keyof typeof kinds) => void;
+  exits: ExitConditions;
+  setExits: (v: ExitConditions) => void;
   remote: boolean;
   setRemote: (v: boolean) => void;
   side: 'eth' | 'usd';
@@ -44,8 +34,8 @@ type Props = {
 export default function NewOrderFields({
   execution,
   trigger,
-  kind,
-  setKind,
+  exits,
+  setExits,
   remote,
   setRemote,
   side,
@@ -70,65 +60,44 @@ export default function NewOrderFields({
 }: Props) {
   return (
     <>
-      <fieldset>
-        <legend>Order type</legend>
-        <div className={`${styles.chips} ${styles.kinds}`}>
-          {Object.entries(kinds).map(([key, label]) => (
-            <button
-              type="button"
-              key={key}
-              aria-pressed={kind === key}
-              onClick={() => setKind(key as keyof typeof kinds)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p>{descriptions[kind]}</p>
-      </fieldset>
       <div className={styles.pair}>
-        <label>
-          Execute on
-          <select
-            value={execution}
-            onChange={(e) => void changeChain(Number(e.target.value) as DestinationId)}
-          >
-            {destinationIds.map((id) => (
-              <option key={id} value={id}>
-                {chains[id].name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Trigger on
-          <select
-            value={remote ? 'remote' : 'local'}
-            onChange={(e) => {
-              setRemote(e.target.value === 'remote');
-              setLower('');
-              setUpper('');
-            }}
-          >
-            <option value="local">Same chain</option>
-            <option value="remote">
-              {chains[execution === 1301 ? 84532 : 1301].name} · cross-chain
-            </option>
-          </select>
-        </label>
+        <Select
+          label="Execute on"
+          value={execution}
+          options={destinationIds.map((id) => ({ value: id, label: chains[id].name }))}
+          onChange={(id) => void changeChain(id)}
+        />
+        <Select
+          label="Trigger on"
+          value={remote ? 'remote' : 'local'}
+          options={[
+            { value: 'local', label: 'Same chain' },
+            {
+              value: 'remote',
+              label: `${chains[execution === 1301 ? 84532 : 1301].name} · cross-chain`,
+            },
+          ]}
+          onChange={(next) => {
+            setRemote(next === 'remote');
+            setLower('');
+            setUpper('');
+          }}
+        />
       </div>
       {remote && (
         <p className={styles.hint}>
           A swap on {chains[trigger].name} fires this order on {chains[execution].name}.
         </p>
       )}
-      <label>
-        Side
-        <select value={side} onChange={(e) => setSide(e.target.value as 'eth' | 'usd')}>
-          <option value="eth">Sell rdETH for rdUSD</option>
-          <option value="usd">Sell rdUSD for rdETH</option>
-        </select>
-      </label>
+      <Select
+        label="Side"
+        value={side}
+        options={[
+          { value: 'eth', label: 'Sell rdETH for rdUSD' },
+          { value: 'usd', label: 'Sell rdUSD for rdETH' },
+        ]}
+        onChange={setSide}
+      />
       <fieldset>
         <legend>Amount · {inputSymbol}</legend>
         <div className={styles.row}>
@@ -154,15 +123,23 @@ export default function NewOrderFields({
         </p>
       </fieldset>
       <fieldset>
-        <legend>Trigger · rdUSD per rdETH</legend>
+        <legend>Exit conditions · rdUSD per rdETH</legend>
         <p>
           Current {chains[trigger].name} price:{' '}
           {spot === undefined ? 'Loading…' : formatPrice(spot)} rdUSD
         </p>
-        {['stop', 'bracket'].includes(kind) && (
+        <label className={styles.condition}>
+          <input
+            type="checkbox"
+            checked={exits.stop}
+            onChange={(e) => setExits({ ...exits, stop: e.target.checked })}
+          />
+          {side === 'eth' ? 'Stop-loss' : 'Buy the dip'}
+        </label>
+        {exits.stop && (
           <>
             <label>
-              Lower price
+              {side === 'eth' ? 'Lower price' : 'Buy when rdETH falls to'}
               <input inputMode="decimal" value={low} onChange={(e) => setLower(e.target.value)} />
             </label>
             <div className={styles.chips}>
@@ -179,10 +156,18 @@ export default function NewOrderFields({
             </div>
           </>
         )}
-        {['take', 'bracket'].includes(kind) && (
+        <label className={styles.condition}>
+          <input
+            type="checkbox"
+            checked={exits.take}
+            onChange={(e) => setExits({ ...exits, take: e.target.checked })}
+          />
+          {side === 'eth' ? 'Take-profit' : 'Buy breakout'}
+        </label>
+        {exits.take && (
           <>
             <label>
-              Upper price
+              {side === 'eth' ? 'Upper price' : 'Buy when rdETH rises to'}
               <input inputMode="decimal" value={high} onChange={(e) => setUpper(e.target.value)} />
             </label>
             <div className={styles.chips}>
@@ -199,7 +184,17 @@ export default function NewOrderFields({
             </div>
           </>
         )}
-        {kind === 'trail' && (
+        {side === 'eth' && (
+          <label className={styles.condition}>
+            <input
+              type="checkbox"
+              checked={exits.trail}
+              onChange={(e) => setExits({ ...exits, trail: e.target.checked })}
+            />
+            Trailing stop
+          </label>
+        )}
+        {side === 'eth' && exits.trail && (
           <>
             <label>
               Trail distance (%)
@@ -207,6 +202,9 @@ export default function NewOrderFields({
             </label>
             <p>Starts tracking from the next swap’s price.</p>
           </>
+        )}
+        {Object.values(exits).filter(Boolean).length >= 2 && (
+          <p>Closes on whichever condition is hit first.</p>
         )}
       </fieldset>
       <div className={styles.pair}>

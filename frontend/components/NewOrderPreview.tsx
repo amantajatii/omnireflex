@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { formatEther } from 'viem';
 import { formatAmount, formatNumber } from '@/lib/format';
 import { chains, type DestinationId } from '@/lib/chains';
-import type { OrderParams } from '@/lib/order-encoding';
+import type { OrderParams, ExitConditions } from '@/lib/order-encoding';
 import styles from './NewOrder.module.css';
 
 type Props = {
   params?: OrderParams;
-  kind: string;
+  exits: ExitConditions;
   side: string;
   amount: string;
   execution: DestinationId;
@@ -29,11 +29,16 @@ export default function NewOrderPreview(p: Props) {
       <p>
         {p.params ? (
           <>
-            Sell {p.amount} {input} on {chains[p.execution].name}{' '}
-            {p.kind === 'trail'
-              ? `when the price retreats ${p.trail}% from its peak`
-              : `if rdETH ${p.kind === 'stop' ? `≤ ${p.lower}` : p.kind === 'take' ? `≥ ${p.upper}` : `≤ ${p.lower} or ≥ ${p.upper}`} rdUSD`}{' '}
-            on {chains[p.trigger].name}. Receive at least{' '}
+            Sell {p.amount} {input} on {chains[p.execution].name} if{' '}
+            {[
+              p.exits.stop && `rdETH ≤ ${formatNumber(Number(p.lower), 2)} rdUSD`,
+              p.exits.take && `rdETH ≥ ${formatNumber(Number(p.upper), 2)} rdUSD`,
+              p.exits.trail && `rdETH falls ${p.trail}% from its peak`,
+            ]
+              .filter(Boolean)
+              .join(' or ')}
+            {Object.values(p.exits).filter(Boolean).length >= 2 ? ', whichever comes first' : ''} on{' '}
+            {chains[p.trigger].name}. Receive at least{' '}
             {formatNumber(formatEther(p.params.minAmountOut), 6)}{' '}
             {p.side === 'eth' ? 'rdUSD' : 'rdETH'}. Expires in {p.hours} h.
           </>

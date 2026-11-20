@@ -12,7 +12,13 @@ assert(Math.abs(tickPrice(-80065) - 3000) < 2);
 assert.equal(orderKind({ lowerTick: -1, upperTick: 8388607, trailTicks: 0 }), 'Stop');
 assert.equal(orderKind({ lowerTick: -8388608, upperTick: 1, trailTicks: 0 }), 'Take');
 assert.equal(orderKind({ lowerTick: -1, upperTick: 1, trailTicks: 0 }), 'Bracket');
-assert.equal(orderKind({ lowerTick: -1, upperTick: 1, trailTicks: 10 }), 'Trailing');
+assert.equal(orderKind({ lowerTick: -8388608, upperTick: 8388607, trailTicks: 10 }), 'Trailing');
+assert.equal(orderKind({ lowerTick: -1, upperTick: 8388607, trailTicks: 0 }, true), 'Buy dip');
+assert.equal(orderKind({ lowerTick: -8388608, upperTick: 1, trailTicks: 0 }, true), 'Buy breakout');
+assert.equal(orderKind({ lowerTick: -1, upperTick: 1, trailTicks: 0 }, true), 'Dip + Breakout');
+assert.equal(orderKind({ lowerTick: -8388608, upperTick: 1, trailTicks: 10 }), 'Trailing + Take');
+assert.equal(orderKind({ lowerTick: -1, upperTick: 8388607, trailTicks: 10 }), 'Trailing + Stop');
+assert.equal(orderKind({ lowerTick: -1, upperTick: 1, trailTicks: 10 }), 'Bracket + Trailing');
 const a = makeShape(42),
   b = makeShape(43);
 assert.deepEqual(makeShape(42), a);

@@ -8,7 +8,12 @@ import { formatAmount } from '@/lib/format';
 import { deployments } from '@/lib/deployments';
 import { executorWriteAbi } from '@/lib/write-abi';
 import { useFeed } from '@/lib/feed';
-import { buildOrder, type OrderParams, trailPercentToTicks } from '@/lib/order-encoding';
+import {
+  buildOrder,
+  type OrderParams,
+  type ExitConditions,
+  trailPercentToTicks,
+} from '@/lib/order-encoding';
 import { useTransaction } from '@/lib/transactions';
 import { ConnectWallet } from './WalletCard';
 import { isSystemStale } from '@/lib/action-logic';
@@ -41,7 +46,7 @@ export default function NewOrder() {
   const execution = chain ?? (account.chainId === 84532 ? 84532 : 1301);
   const [remote, setRemote] = useState(false),
     trigger = remote ? (execution === 1301 ? 84532 : 1301) : execution;
-  const [kind, setKind] = useState<'stop' | 'take' | 'bracket' | 'trail'>('stop'),
+  const [exits, setExits] = useState<ExitConditions>({ stop: true, take: false, trail: false }),
     [side, setSide] = useState<'eth' | 'usd'>('eth');
   const [amount, setAmount] = useState(''),
     [lower, setLower] = useState(''),
@@ -89,6 +94,8 @@ export default function NewOrder() {
   let params: OrderParams | undefined,
     error = '';
   try {
+    if (!exits.stop && !exits.take && !exits.trail)
+      throw new Error('Select at least one exit condition.');
     if (!amount) throw new Error('Enter an amount to continue.');
     if (!/^\d+(\.\d{1,18})?$/.test(amount))
       throw new Error('Enter a positive decimal amount with at most 18 decimal places.');
@@ -107,10 +114,14 @@ export default function NewOrder() {
       throw new Error(`Minimum input is ${formatAmount(pool[1], inputSymbol)} ${inputSymbol}.`);
     if (amountIn > balance) throw new Error(`Insufficient ${inputSymbol} balance.`);
     if (!spot || !Number.isFinite(spot)) throw new Error('Waiting for the trigger pool price.');
-    if (['stop', 'bracket'].includes(kind) && !(Number(low) > 0 && Number(low) < spot))
-      throw new Error('Stop price must be positive and below the current price.');
-    if (['take', 'bracket'].includes(kind) && !(Number(high) > spot))
-      throw new Error('Take price must be above the current price.');
+    if (exits.stop && !(Number(low) > 0 && Number(low) < spot))
+      throw new Error(
+        `${side === 'eth' ? 'Stop' : 'Dip'} price must be positive and below the current price.`,
+      );
+    if (exits.take && !(Number(high) > spot))
+      throw new Error(
+        `${side === 'eth' ? 'Take' : 'Breakout'} price must be above the current price.`,
+      );
     if (
       !slippage.trim() ||
       !Number.isFinite(Number(slippage)) ||
@@ -128,12 +139,13 @@ export default function NewOrder() {
         rdETH: triggerDeployment.rdETH,
         tick: feed.systems[trigger]!.tick,
       },
-      kind,
+      exits,
       side,
       amountIn,
-      distance: kind === 'trail' ? trailPercentToTicks(Number(trail)) : 200,
-      lowerPrice: kind === 'stop' || kind === 'bracket' ? Number(low) : undefined,
-      upperPrice: kind === 'take' || kind === 'bracket' ? Number(high) : undefined,
+      distance: 200,
+      trailTicks: exits.trail ? trailPercentToTicks(Number(trail)) : 0,
+      lowerPrice: exits.stop ? Number(low) : undefined,
+      upperPrice: exits.take ? Number(high) : undefined,
       slippageBps: Math.round(Number(slippage) * 100),
       expiry: BigInt(Math.floor(feed.now / 1000) + hours * 3600),
     });
@@ -241,7 +253,8 @@ export default function NewOrder() {
             setGranularity={setGranularity}
             trigger={trigger}
             spot={spot}
-            kind={kind}
+            exits={exits}
+            side={side}
             lower={low}
             upper={high}
             trail={trail}
@@ -261,12 +274,15 @@ export default function NewOrder() {
             <NewOrderFields
               execution={execution}
               trigger={trigger}
-              kind={kind}
-              setKind={setKind}
+              exits={exits}
+              setExits={setExits}
               remote={remote}
               setRemote={setRemote}
               side={side}
-              setSide={setSide}
+              setSide={(value) => {
+                setSide(value);
+                if (value === 'usd') setExits((current) => ({ ...current, trail: false }));
+              }}
               amount={amount}
               setAmount={setAmount}
               low={low}
@@ -325,7 +341,7 @@ export default function NewOrder() {
           </form>
           <NewOrderPreview
             params={params}
-            kind={kind}
+            exits={exits}
             side={side}
             amount={amount}
             execution={execution}

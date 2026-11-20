@@ -24,12 +24,14 @@ export type OrderParams = {
     trailTicks: number;
   };
 };
+export type ExitConditions = { stop: boolean; take: boolean; trail: boolean };
 export type OrderInput = {
   executionKey: PoolKey;
   rdETH: Address;
   executionSqrtPriceX96: bigint;
   trigger: { chainId: number | bigint; key: PoolKey; rdETH: Address; tick: number };
-  kind: 'stop' | 'take' | 'bracket' | 'trail';
+  exits: ExitConditions;
+  trailTicks: number;
   side: 'eth' | 'usd';
   amountIn: bigint;
   distance: number;
@@ -118,13 +120,21 @@ export function buildOrder(input: OrderInput): OrderParams {
     executionKey,
     rdETH,
     trigger: market,
-    kind,
+    exits,
     amountIn,
     distance,
     slippageBps,
     expiry,
   } = input;
+  if (!exits.stop && !exits.take && !exits.trail)
+    throw new Error('Select at least one exit condition.');
+  if (exits.trail && input.side === 'usd')
+    throw new Error('Trailing stop is only supported when selling rdETH.');
   if (
+    (exits.trail &&
+      (!Number.isInteger(input.trailTicks) ||
+        input.trailTicks <= 0 ||
+        input.trailTicks > 0xffffff)) ||
     amountIn <= 0n ||
     amountIn > U128 ||
     !Number.isInteger(distance) ||
@@ -145,34 +155,36 @@ export function buildOrder(input: OrderInput): OrderParams {
   const inverted = !equal(market.key.currency0, market.rdETH);
   const t = inverted ? -market.tick : market.tick;
   const lower =
-    (kind === 'stop' || kind === 'bracket') && input.lowerPrice !== undefined
-      ? priceToTick(input.lowerPrice)
-      : t - distance;
+    exits.stop && input.lowerPrice !== undefined ? priceToTick(input.lowerPrice) : t - distance;
   const upper =
-    (kind === 'take' || kind === 'bracket') && input.upperPrice !== undefined
-      ? priceToTick(input.upperPrice)
-      : t + distance;
+    exits.take && input.upperPrice !== undefined ? priceToTick(input.upperPrice) : t + distance;
   if (
     Math.abs(market.tick) > 887272 ||
     !Number.isInteger(market.tick) ||
-    Math.abs(lower) > 887272 ||
-    Math.abs(upper) > 887272 ||
-    (kind === 'bracket' && lower >= upper)
+    (exits.stop && Math.abs(lower) > 887272) ||
+    (exits.take && Math.abs(upper) > 887272) ||
+    (exits.trail && Math.abs(t - input.trailTicks) > 887272) ||
+    (exits.stop && exits.take && lower >= upper)
   )
     throw new Error('Invalid trigger bounds');
   const trigger = {
     chainId: BigInt(market.chainId),
     poolId: poolId(market.key),
     inverted,
-    lowerTick: kind === 'stop' || kind === 'bracket' ? lower : NO_LOWER_TICK,
-    upperTick: kind === 'take' || kind === 'bracket' ? upper : NO_UPPER_TICK,
-    trailTicks: kind === 'trail' ? distance : 0,
+    lowerTick: exits.stop ? lower : NO_LOWER_TICK,
+    upperTick: exits.take ? upper : NO_UPPER_TICK,
+    trailTicks: exits.trail ? input.trailTicks : 0,
   };
   let referencePrice = input.executionSqrtPriceX96;
   let quoteZeroForOne = zeroForOne;
-  if (kind !== 'take' || (input.side === 'usd' && input.upperPrice !== undefined)) {
-    // USD sells use the upper bracket bound: it gives the least rdETH across both arms.
-    const bound = input.side === 'usd' && (kind === 'bracket' || kind === 'take') ? upper : lower;
+  if (exits.stop || exits.trail || (input.side === 'usd' && input.upperPrice !== undefined)) {
+    // Quote the least output across active arms; legacy take-only without a price uses execution spot.
+    const bound =
+      input.side === 'usd'
+        ? exits.take
+          ? upper
+          : lower
+        : Math.min(exits.stop ? lower : Infinity, exits.trail ? t - input.trailTicks : Infinity);
     referencePrice = getSqrtPriceAtTick(inverted ? -bound : bound);
     quoteZeroForOne = input.side === 'eth' ? !inverted : inverted;
   }

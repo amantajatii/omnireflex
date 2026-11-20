@@ -1,3 +1,4 @@
+import { legacyBuildOrder } from './fixtures/legacy-order-encoding';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import {
@@ -11,7 +12,7 @@ import uni from '../lib/records/1301.json';
 import base from '../lib/records/84532.json';
 import fixture from './fixtures/order-one.json';
 import {
-  buildOrder,
+  buildOrder as buildExitsOrder,
   getSqrtPriceAtTick,
   poolId,
   priceToTick,
@@ -32,8 +33,26 @@ import {
 } from '../lib/action-logic';
 import { executorWriteAbi, faucetAbi, swapRouterAbi } from '../lib/write-abi';
 
+// Keep original vectors readable while exercising the new flags API.
+type LegacyInput = Omit<OrderInput, 'exits' | 'trailTicks'> & {
+  kind: 'stop' | 'take' | 'bracket' | 'trail';
+};
+function buildOrder(input: LegacyInput) {
+  const { kind, ...rest } = input;
+  return buildExitsOrder({
+    ...rest,
+    exits: {
+      stop: kind === 'stop' || kind === 'bracket',
+      take: kind === 'take' || kind === 'bracket',
+      trail: kind === 'trail',
+    },
+    trailTicks: kind === 'trail' ? input.distance : 0,
+  });
+}
+const calldata = (order: ReturnType<typeof buildExitsOrder>) =>
+  encodeFunctionData({ abi: executorWriteAbi, functionName: 'createOrder', args: [order] });
 const key = uni.poolKey as PoolKey;
-const input: OrderInput = {
+const input: LegacyInput = {
   executionKey: key,
   rdETH: uni.rdETH as Address,
   executionSqrtPriceX96: getSqrtPriceAtTick(-80040),
@@ -81,7 +100,7 @@ for (const side of ['eth', 'usd'] as const) {
         const triggerKey = remote ? remoteKey : executionKey;
         const triggerETH = (remote ? base.rdETH : uni.rdETH) as Address;
         const triggerTick = remote ? -81000 : executionRawTick;
-        const order = buildOrder({
+        const vector: LegacyInput = {
           ...input,
           executionKey,
           executionSqrtPriceX96: getSqrtPriceAtTick(executionRawTick),
@@ -93,7 +112,17 @@ for (const side of ['eth', 'usd'] as const) {
           },
           kind,
           side,
-        });
+        };
+        if (side === 'usd' && kind === 'trail') {
+          assert.throws(() => buildOrder(vector), /only supported when selling rdETH/);
+          continue;
+        }
+        const order = buildOrder(vector);
+        assert.equal(
+          calldata(order),
+          calldata(legacyBuildOrder(vector)),
+          `legacy ${kind}/${side}/${remote}/${reverse}`,
+        );
         const normalised = remote ? 81000 : 80040;
         assert.equal(order.zeroForOne, (side === 'eth') === reverse);
         assert.equal(order.trigger.inverted, remote || !reverse);
@@ -139,6 +168,7 @@ for (const kind of ['stop', 'take', 'trail'] as const) {
     upperPrice: kind === 'take' ? undefined : -1,
   });
   assert.deepEqual(hidden, clean, `${kind} ignores hidden fields`);
+  assert.equal(calldata(hidden), calldata(legacyBuildOrder({ ...input, kind })));
 }
 const tenPercentTrail = buildOrder({
   ...input,
@@ -147,6 +177,18 @@ const tenPercentTrail = buildOrder({
   lowerPrice: 2900,
   upperPrice: 3100,
 });
+assert.equal(
+  calldata(tenPercentTrail),
+  calldata(
+    legacyBuildOrder({
+      ...input,
+      kind: 'trail',
+      distance: trailPercentToTicks(10),
+      lowerPrice: 2900,
+      upperPrice: 3100,
+    }),
+  ),
+);
 assert.equal(
   tenPercentTrail.minAmountOut,
   (quote(getSqrtPriceAtTick(-80040 + trailPercentToTicks(10)), false, input.amountIn) * 9500n) /
@@ -178,6 +220,10 @@ for (const invalid of [
 ])
   assert.throws(() => buildOrder({ ...input, ...invalid }));
 const custom = buildOrder({ ...input, kind: 'bracket', lowerPrice: 2800, upperPrice: 3200 });
+assert.equal(
+  calldata(custom),
+  calldata(legacyBuildOrder({ ...input, kind: 'bracket', lowerPrice: 2800, upperPrice: 3200 })),
+);
 assert.equal(custom.trigger.lowerTick, priceToTick(2800));
 assert.equal(custom.trigger.upperTick, priceToTick(3200));
 const usdBracket = buildOrder({
@@ -191,6 +237,79 @@ assert.equal(
   usdBracket.minAmountOut,
   (quote(getSqrtPriceAtTick(-priceToTick(3200)), true, input.amountIn) * 9500n) / 10000n,
 );
+
+assert.equal(
+  calldata(usdBracket),
+  calldata(
+    legacyBuildOrder({
+      ...input,
+      side: 'usd',
+      kind: 'bracket',
+      lowerPrice: 2800,
+      upperPrice: 3200,
+    }),
+  ),
+);
+// New combinations quote the worst active sell arm in either pool orientation.
+for (const reverse of [false, true]) {
+  for (const remote of [false, true]) {
+    for (const stop of [false, true]) {
+      for (const take of [false, true]) {
+        for (const lowerTick of [79000, 79900]) {
+          const executionKey = reverse
+            ? { ...key, currency0: key.currency1, currency1: key.currency0 }
+            : key;
+          const triggerKey = remote ? (base.poolKey as PoolKey) : executionKey;
+          const inverted = remote || !reverse;
+          const t = remote ? 81000 : 80040;
+          const combo = buildExitsOrder({
+            ...input,
+            executionKey,
+            trigger: {
+              chainId: remote ? 84532 : 1301,
+              key: triggerKey,
+              rdETH: (remote ? base.rdETH : uni.rdETH) as Address,
+              tick: inverted ? -t : t,
+            },
+            exits: { stop, take, trail: true },
+            trailTicks: 203,
+            lowerPrice: tickToPrice(lowerTick),
+            upperPrice: tickToPrice(82000),
+          });
+          const worst = Math.min(stop ? lowerTick : Infinity, t - 203);
+          assert.equal(
+            combo.minAmountOut,
+            (quote(getSqrtPriceAtTick(inverted ? -worst : worst), !inverted, input.amountIn) *
+              9500n) /
+              10000n,
+          );
+          assert.equal(combo.trigger.lowerTick, stop ? lowerTick : NO_LOWER_TICK);
+          assert.equal(combo.trigger.upperTick, take ? 82000 : NO_UPPER_TICK);
+          assert.equal(combo.trigger.trailTicks, 203);
+        }
+      }
+    }
+  }
+}
+for (const invalid of [
+  { exits: { stop: false, take: false, trail: false } },
+  { exits: { stop: true, take: true, trail: false }, lowerPrice: 3000, upperPrice: 3000 },
+  { exits: { stop: false, take: false, trail: true }, side: 'usd' as const },
+  ...[0, -1, 1.5, NaN, 0x1000000].map((trailTicks) => ({
+    exits: { stop: false, take: false, trail: true },
+    trailTicks,
+  })),
+])
+  assert.throws(() =>
+    buildExitsOrder({
+      ...input,
+      trailTicks: 203,
+      ...invalid,
+    }),
+  );
+const usdTake = { ...input, side: 'usd' as const, kind: 'take' as const, upperPrice: 3200 };
+assert.equal(calldata(buildOrder(usdTake)), calldata(legacyBuildOrder(usdTake)));
+assert.equal(buildOrder(usdTake).minAmountOut, usdBracket.minAmountOut);
 
 assert.equal(swapPriceLimit(true), 4295128740n);
 assert.equal(swapPriceLimit(false), 1461446703485210103287273052203988822378723970341n);
@@ -259,7 +378,7 @@ for (const [contract, abi] of [
   }
 }
 process.stdout.write(
-  'PASS phase2: 32 kind/side/chain/orientation encodings, saved live #1 calldata/receipt, ABI parity, action boundaries, cooldown, swap limits\n',
+  'PASS phase2: 28 byte-identical legacy encodings + 4 rejected USD trails, combination worst-arm quotes, saved live #1 calldata/receipt, ABI parity, action boundaries, cooldown, swap limits\n',
 );
 
 // Human-readable contract errors.

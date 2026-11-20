@@ -65,7 +65,7 @@ export async function readOrders(
         chainId,
         owner: event.args.owner,
         triggerChain: Number(event.args.trigger.chainId),
-        kind: orderKind(event.args.trigger),
+        kind: orderKind(event.args.trigger, order.params.zeroForOne),
         amountIn: order.params.amountIn,
         zeroForOne: order.params.zeroForOne,
         inputSymbol: order.params.zeroForOne ? 'rdUSD' : 'rdETH',

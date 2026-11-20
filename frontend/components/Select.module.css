@@ -1,0 +1,104 @@
+.field {
+  position: relative;
+  display: grid;
+  gap: var(--select-gap, 6px);
+  min-width: 0;
+}
+.label {
+  font-size: var(--select-label-size, 12px);
+}
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--select-height, 38px);
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--rx-line-strong);
+  border-radius: 2px;
+  background: var(--rx-raise);
+  color: var(--rx-ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s var(--rx-ease);
+}
+.trigger:hover:not(:disabled),
+.trigger[aria-expanded='true'] {
+  border-color: var(--rx-ink);
+}
+.trigger:focus-visible {
+  outline: 2px solid var(--rx-ink);
+  outline-offset: 3px;
+}
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chevron {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  color: var(--rx-soft);
+  transition: transform 0.2s var(--rx-ease);
+}
+.trigger[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+  color: var(--rx-ink);
+}
+.list {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--rx-raise);
+  border: 1px solid var(--rx-line-strong);
+  border-radius: 2px;
+  box-shadow: var(--rx-shadow);
+}
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 10px;
+  font-size: 13px;
+  color: var(--rx-soft);
+  cursor: pointer;
+}
+.option[data-active='true'] {
+  background: var(--rx-card);
+  color: var(--rx-ink);
+}
+.option[aria-selected='true'] {
+  color: var(--rx-ink);
+  font-weight: 600;
+}
+.check {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chevron,
+  .trigger {
+    transition: none;
+  }
+}

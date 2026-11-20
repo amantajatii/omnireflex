@@ -61,8 +61,30 @@ export type ReactiveEvent = {
   retries?: number;
   trace?: Execution['trace'];
 };
-export function orderKind(trigger: Pick<Trigger, 'trailTicks' | 'lowerTick' | 'upperTick'>) {
-  if (trigger.trailTicks > 0) return 'Trailing';
+/**
+ * Human label for an order's exit conditions. `buying` marks rdUSD → rdETH orders, whose lower
+ * bound buys a dip and whose upper bound buys a breakout rather than stopping or taking profit.
+ */
+export function orderKind(
+  trigger: Pick<Trigger, 'trailTicks' | 'lowerTick' | 'upperTick'>,
+  buying = false,
+) {
+  if (buying && trigger.trailTicks === 0) {
+    const dip = trigger.lowerTick !== -8388608,
+      breakout = trigger.upperTick !== 8388607;
+    return dip && breakout ? 'Dip + Breakout' : dip ? 'Buy dip' : 'Buy breakout';
+  }
+  if (trigger.trailTicks > 0) {
+    const stop = trigger.lowerTick !== -8388608,
+      take = trigger.upperTick !== 8388607;
+    return stop && take
+      ? 'Bracket + Trailing'
+      : take
+        ? 'Trailing + Take'
+        : stop
+          ? 'Trailing + Stop'
+          : 'Trailing';
+  }
   if (trigger.lowerTick !== -8388608 && trigger.upperTick !== 8388607) return 'Bracket';
   return trigger.lowerTick !== -8388608 ? 'Stop' : 'Take';
 }
