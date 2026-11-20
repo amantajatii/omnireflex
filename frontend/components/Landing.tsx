@@ -100,6 +100,11 @@ export default function Landing() {
                 ? 'No timed executions available; timing shows the first-loop reference.'
                 : 'Block timestamps across chains can skew by about 1 s.'}
           </p>
+          <p className={`mono ${styles.latencyNote}`}>
+            Reactive Omni (~1 s blocks) evaluates every subscribed Swap and dispatches the
+            destination callback without off-chain keepers. Every order shows per-stage block times;
+            orders observed by the live indexer also show millisecond readings.
+          </p>
         </Reveal>
         <Reveal id="faq" className={styles.faqPanel}>
           <div>

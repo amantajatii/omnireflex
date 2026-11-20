@@ -1,12 +1,111 @@
-.article p {
-  margin: 16px 0 30px;
+.article {
   color: var(--rx-soft);
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+.article > * {
+  max-width: 82ch;
+}
+.article h1 {
+  color: var(--rx-ink);
+  font-size: 36px;
+  line-height: 1.15;
+  margin: 0 0 28px;
+}
+.article h2 {
+  color: var(--rx-ink);
+  font-size: 22px;
+  margin: 48px 0 14px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rx-line);
+}
+.article h3 {
+  color: var(--rx-ink);
+  font-size: 16px;
+  margin: 32px 0 10px;
+}
+.article p,
+.article ul,
+.article ol {
+  margin: 0 0 16px;
+}
+.article ul,
+.article ol {
+  padding-left: 22px;
+}
+.article li + li {
+  margin-top: 6px;
+}
+.article a {
+  color: var(--rx-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.article strong {
+  color: var(--rx-ink);
+}
+.article code {
+  font: 12px/1.6 var(--rx-font-mono);
+  background: var(--rx-card);
+  border: 1px solid var(--rx-line);
+  padding: 1px 5px;
+  overflow-wrap: anywhere;
 }
 .article pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: 12px/1.9 var(--rx-font-mono);
-  max-width: 85ch;
-  color: var(--rx-soft);
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--rx-card);
+  border: 1px solid var(--rx-line);
+  padding: 16px 18px;
+  margin: 0 0 20px;
+}
+.article pre code {
+  /* JetBrains Mono's latin subset lacks box-drawing glyphs; system monospace keeps diagrams aligned. */
+  font-family: ui-monospace, 'SF Mono', Menlo, 'DejaVu Sans Mono', Consolas, monospace;
+  line-height: 1.25;
+  background: none;
+  border: 0;
+  padding: 0;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+.article table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 20px;
+  font-size: 13px;
+}
+.article th,
+.article td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 14px 8px 0;
+  border-bottom: 1px solid var(--rx-line);
+}
+.article th {
+  color: var(--rx-ink);
+  font: 11px var(--rx-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom-color: var(--rx-line-strong);
+}
+.article td code {
+  white-space: nowrap;
+}
+.article blockquote {
+  margin: 0 0 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--rx-line-strong);
+}
+.article hr {
+  border: 0;
+  border-top: 1px solid var(--rx-line);
+  margin: 32px 0;
+}
+@media (max-width: 640px) {
+  .article h1 {
+    font-size: 28px;
+  }
 }

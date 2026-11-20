@@ -35,10 +35,11 @@ Every approval, order, refund and swap is simulated before its wallet write; rec
 refreshes wallet reads, the shared feed and Market. Transaction cards retain explorer links and
 show decoded reverts. No private keys are requested.
 
-The faucet address is optional in each deployment record. Both records currently omit it, so
-cards show "Faucet not deployed yet". `scripts/sync-records.mjs` copies the entire record and
-preserves `faucet` when it is later added. Faucet ABI matches the compiled contract, including
-custom errors, event, views and owner methods; owner actions are not exposed in the app.
+Both destination deployment records (`1301.json` and `84532.json`) include a deployed `faucet`
+address, which `scripts/sync-records.mjs` copies into `lib/records/` before build. If a record
+omits `faucet`, the card falls back to "Faucet not deployed yet". Faucet ABI matches the compiled
+contract, including custom errors, event, views and owner methods; owner actions are not exposed in
+the app.
 
 Order encoding ports the script's normalised ticks, sentinels, TickMath, integer quote and
 slippage calculation. The order-one fixture reproduces saved live `createOrder` calldata and

@@ -2,39 +2,72 @@
 import styles from './Landing.module.css';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { chains, explorer, type ChainId } from '@/lib/chains';
+import { explorer, type ChainId } from '@/lib/chains';
 import { deployments, reactive } from '@/lib/deployments';
 import { Arrow } from './Shared';
+
+const SHORT_NAME: Record<ChainId, string> = {
+  1301: 'Unichain',
+  84532: 'Base',
+  5318007: 'Lasna',
+};
+
+interface Entry {
+  address: string;
+  chains: ChainId[];
+}
+interface Row {
+  name: string;
+  entries: Entry[];
+}
+
+const short = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
+
+/** One entry when both destination chains share the address, otherwise one per chain. */
+function perDestination(pick: (chain: 1301 | 84532) => string | undefined): Entry[] {
+  const uni = pick(1301),
+    base = pick(84532);
+  if (uni && base && uni.toLowerCase() === base.toLowerCase())
+    return [{ address: uni, chains: [1301, 84532] }];
+  return [
+    ...(uni ? [{ address: uni, chains: [1301 as ChainId] }] : []),
+    ...(base ? [{ address: base, chains: [84532 as ChainId] }] : []),
+  ];
+}
+
+const rows = (
+  [
+    { name: 'Executor', entries: perDestination((c) => deployments[c].executor) },
+    {
+      name: 'ReflexReactive',
+      entries: [{ address: reactive.address, chains: [5318007 as ChainId] }],
+    },
+    { name: 'rdETH', entries: perDestination((c) => deployments[c].rdETH) },
+    { name: 'rdUSD', entries: perDestination((c) => deployments[c].rdUSD) },
+    { name: 'PoolManager', entries: perDestination((c) => deployments[c].poolManager) },
+    { name: 'Swap router', entries: perDestination((c) => deployments[c].swapRouter) },
+    { name: 'Faucet', entries: perDestination((c) => deployments[c].faucet) },
+  ] satisfies Row[]
+).filter((row) => row.entries.length > 0);
+
 export default function Addresses() {
   const [copied, setCopied] = useState(''),
     [error, setError] = useState('');
-  const records: { title: string; chain: ChainId; address: string }[] = [
-    { title: 'Executor · Unichain Sepolia', chain: 1301, address: deployments[1301].executor },
-    { title: 'Executor · Base Sepolia', chain: 84532, address: deployments[84532].executor },
-    { title: 'ReflexReactive · Lasna', chain: 5318007, address: reactive.address },
-    ...([1301, 84532] as const).flatMap((chain) => [
-      { title: `rdETH · ${chains[chain].name}`, chain, address: deployments[chain].rdETH },
-      { title: `rdUSD · ${chains[chain].name}`, chain, address: deployments[chain].rdUSD },
-      {
-        title: `PoolManager · ${chains[chain].name}`,
-        chain,
-        address: deployments[chain].poolManager,
-      },
-      {
-        title: `Swap router · ${chains[chain].name}`,
-        chain,
-        address: deployments[chain].swapRouter,
-      },
-      ...(deployments[chain].faucet
-        ? [{ title: `Faucet · ${chains[chain].name}`, chain, address: deployments[chain].faucet! }]
-        : []),
-    ]),
-  ];
   useEffect(() => {
     if (!copied) return;
     const timer = setTimeout(() => setCopied(''), 1800);
     return () => clearTimeout(timer);
   }, [copied]);
+  const copy = async (key: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(key);
+      setError('');
+    } catch {
+      setError('Copy unavailable. Open the explorer link to copy the address.');
+    }
+  };
+  const poolId = deployments[1301].poolId;
   return (
     <section className={`panel ${styles.run}`}>
       <div>
@@ -54,51 +87,45 @@ export default function Addresses() {
         </Link>
       </div>
       <div className={styles.addresses}>
-        {records.map((row) => (
-          <div key={row.title}>
-            <span className="mono">{row.title}</span>
+        {[
+          ...rows,
+          { name: 'Pool ID', entries: [{ address: poolId, chains: [] as ChainId[] }] },
+        ].map((row) => (
+          <div key={row.name} className={styles.addressRow}>
+            <span className="mono">{row.name}</span>
             <div>
-              <a
-                href={explorer(row.chain, `address/${row.address}`)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {row.address}
-                <span aria-hidden="true"> ↗</span>
-              </a>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(row.address);
-                    setCopied(row.title);
-                    setError('');
-                  } catch {
-                    setError('Copy unavailable. Select the address to copy it.');
-                  }
-                }}
-                aria-label={`Copy ${row.title} address`}
-              >
-                {copied === row.title ? 'Copied' : 'Copy'}
-              </button>
+              {row.entries.map((entry) => {
+                const key = `${row.name}:${entry.address}`;
+                return (
+                  <div key={key} className={styles.addressEntry}>
+                    <code title={entry.address}>{short(entry.address)}</code>
+                    <span className={styles.addressChains}>
+                      {entry.chains.length === 0
+                        ? 'Unichain · Base'
+                        : entry.chains.map((chain) => (
+                            <a
+                              key={chain}
+                              href={explorer(chain, `address/${entry.address}`)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {SHORT_NAME[chain]}
+                              <span aria-hidden="true"> ↗</span>
+                            </a>
+                          ))}
+                    </span>
+                    <button
+                      onClick={() => copy(key, entry.address)}
+                      aria-label={`Copy ${row.name} address ${entry.chains.map((c) => SHORT_NAME[c]).join(' ')}`}
+                    >
+                      {copied === key ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
-        <div>
-          <span className="mono">Pool ID · both destination chains</span>
-          <code>{deployments[1301].poolId}</code>
-          <button
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(deployments[1301].poolId);
-                setCopied('pool');
-              } catch {
-                setError('Copy unavailable. Select the pool ID to copy it.');
-              }
-            }}
-          >
-            {copied === 'pool' ? 'Copied' : 'Copy pool ID'}
-          </button>
-        </div>
         <span role="status" className="mono">
           {error || (copied ? 'Copied to clipboard' : '')}
         </span>

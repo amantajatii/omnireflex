@@ -47,6 +47,37 @@ export default function Dashboard({
           </PageHeader>
           <section className="panel">
             <div className="section-head">
+              <h2>Try the loop</h2>
+              <span className="mono">4 steps · browser only</span>
+            </div>
+            <div className={styles.walkthrough}>
+              <Link href="/app/faucet">
+                <span className="mono">01 · FAUCET</span>
+                <strong>Claim demo tokens</strong>
+                <p>Drip 5 rdETH and 15,000 rdUSD on Unichain Sepolia or Base Sepolia.</p>
+              </Link>
+              <Link href="/app/new">
+                <span className="mono">02 · NEW ORDER</span>
+                <strong>Arm a trigger</strong>
+                <p>Place a stop, take-profit, bracket, or trailing order on either chain.</p>
+              </Link>
+              <Link href="/app/market">
+                <span className="mono">03 · MARKET</span>
+                <strong>Move the pool</strong>
+                <p>
+                  Swap on the Uniswap v4 pool to cross your trigger, or wait: a price bot keeps the
+                  pool tracking real ETH/USD.
+                </p>
+              </Link>
+              <Link href="/app/orders">
+                <span className="mono">04 · INSPECT</span>
+                <strong>Verify the loop</strong>
+                <p>Open the order timeline to inspect T0, T1, and T2 hashes and latency.</p>
+              </Link>
+            </div>
+          </section>
+          <section className="panel">
+            <div className="section-head">
               <h2>Latest loops</h2>
               <Link href="/app/orders">All orders ↗</Link>
             </div>
