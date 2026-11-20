@@ -62,24 +62,118 @@
 }
 .wallet {
   display: grid;
-  gap: 12px;
-  border-top: 1px solid var(--rx-line);
-  padding-top: 18px;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--rx-line);
+  background: var(--rx-card);
 }
 .wallet p {
   font-size: 10px;
   overflow-wrap: anywhere;
 }
-.switcher {
+.account {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rx-ink);
+}
+.address {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--rx-ink);
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: copy;
+}
+.address:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.connectRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.connectRow > div,
+.connectRow > p {
+  flex: 1;
+  min-width: 0;
+}
+.connectRow :global(.button) {
+  width: 100%;
+}
+.connectRow > button {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+}
+.connectRow p[role='status']:empty {
+  display: none;
+}
+.account > button:last-child {
+  flex-shrink: 0;
+}
+.iconButton {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rx-line);
+  background: var(--rx-paper);
+  color: var(--rx-soft);
+}
+.iconButton:hover {
+  color: var(--rx-ink);
+  border-color: var(--rx-line-strong);
+}
+.iconButton svg {
+  width: 14px;
+  height: 14px;
+}
+.wrongNetwork {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+}
+.wrongNetwork button {
+  justify-self: start;
+  border: 1px solid var(--rx-ink);
+  background: none;
+  color: var(--rx-ink);
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--rx-line-strong);
 }
 .switcher button {
-  flex: 1;
+  border: 0;
   background: var(--rx-paper);
-  border: 1px solid var(--rx-line);
-  padding: 7px;
+  color: var(--rx-soft);
+  padding: 6px;
   font-size: 11px;
+}
+.switcher button + button {
+  border-left: 1px solid var(--rx-line-strong);
+}
+.switcher button:hover:not(:disabled) {
+  color: var(--rx-ink);
 }
 .switcher button[aria-pressed='true'] {
   background: var(--rx-ink);
@@ -87,24 +181,21 @@
 }
 .balances {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   margin: 0;
-  font: 10.5px var(--rx-font-mono);
+  font: 11px var(--rx-font-mono);
 }
 .balances div {
   display: flex;
   justify-content: space-between;
   gap: 8px;
 }
+.balances dt {
+  color: var(--rx-soft);
+}
 .balances dd {
   margin: 0;
-}
-.footer {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: 22px;
-  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 .shell .content {
   margin: 0 0 0 252px;

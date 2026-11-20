@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useAccount, useBalance, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { type Address } from 'viem';
 import { chains, type DestinationId } from '@/lib/chains';
@@ -32,6 +32,18 @@ export function ConnectWallet() {
     </div>
   );
 }
+const compact = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 2,
+});
+const plain = (digits: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits });
+/** Short sidebar balance: 2.7M above 100k, 4 decimals below 1, 2 otherwise. */
+function shortBalance(formatted: string) {
+  const value = Number(formatted);
+  if (!Number.isFinite(value)) return formatted;
+  if (value >= 100_000) return compact.format(value);
+  return plain(value < 1 ? 4 : 2).format(value);
+}
 function Balances({ address, chainId }: { address: Address; chainId: DestinationId }) {
   const eth = useBalance({ address, chainId, query: { refetchInterval: 15000 } });
   const rdETH = useBalance({
@@ -57,12 +69,10 @@ function Balances({ address, chainId }: { address: Address; chainId: Destination
         return (
           <div key={String(label)}>
             <dt>{String(label)}</dt>
-            <dd>
-              {read.error
-                ? 'Unavailable'
-                : read.data
-                  ? amount(read.data.value, String(label))
-                  : '…'}
+            <dd
+              title={read.data ? `${amount(read.data.value, String(label))} ${label}` : undefined}
+            >
+              {read.error ? 'Unavailable' : read.data ? shortBalance(read.data.formatted) : '…'}
             </dd>
           </div>
         );
@@ -70,7 +80,8 @@ function Balances({ address, chainId }: { address: Address; chainId: Destination
     </dl>
   );
 }
-export default function WalletCard() {
+/** Sidebar wallet. `trailing` (e.g. the theme toggle) sits on the same row in every state. */
+export default function WalletCard({ trailing }: { trailing?: ReactNode }) {
   const mounted = useMounted(),
     account = useAccount(),
     { disconnect } = useDisconnect(),
@@ -81,39 +92,69 @@ export default function WalletCard() {
     const timer = setTimeout(() => setCopy(''), 1800);
     return () => clearTimeout(timer);
   }, [copy]);
-  if (!mounted)
+  if (!mounted || !account.address)
     return (
-      <p className="mono" role="status">
-        Loading wallet…
-      </p>
+      <div className={styles.connectRow}>
+        {mounted ? (
+          <ConnectWallet />
+        ) : (
+          <p className="mono" role="status">
+            Loading wallet…
+          </p>
+        )}
+        {trailing}
+      </div>
     );
-  if (!account.address) return <ConnectWallet />;
   const supported = account.chainId === 1301 || account.chainId === 84532;
   return (
     <div className={styles.wallet}>
-      <button
-        className="button ghost mono"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(account.address!);
-            setCopy('Copied');
-          } catch {
-            setCopy('Copy unavailable');
-          }
-        }}
-      >
-        {short(account.address)}
-        {copy ? ` · ${copy}` : ''}
-      </button>
+      <div className={styles.account}>
+        <span className={styles.dot} aria-hidden="true" />
+        <button
+          type="button"
+          className={`mono ${styles.address}`}
+          title="Copy address"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(account.address!);
+              setCopy('Copied');
+            } catch {
+              setCopy('Copy unavailable');
+            }
+          }}
+        >
+          {copy || short(account.address)}
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={() => disconnect()}
+          aria-label="Disconnect wallet"
+          title="Disconnect"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M6 3H3.5v10H6M10 5l3 3-3 3M13 8H6.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.3"
+            />
+          </svg>
+        </button>
+        {trailing}
+      </div>
       {!supported && (
-        <div className="tag pending">
-          Wrong network
-          <button onClick={() => switchChain({ chainId: 1301 })}>Switch to Unichain Sepolia</button>
+        <div className={styles.wrongNetwork} role="status">
+          <span>Wrong network</span>
+          <button type="button" onClick={() => switchChain({ chainId: 1301 })}>
+            Switch to Unichain
+          </button>
         </div>
       )}
-      <div className={styles.switcher} aria-label="Wallet network">
+      <div className={styles.switcher} role="group" aria-label="Wallet network">
         {([1301, 84532] as const).map((id) => (
           <button
+            type="button"
             key={id}
             aria-pressed={account.chainId === id}
             disabled={isPending}
@@ -124,15 +165,9 @@ export default function WalletCard() {
         ))}
       </div>
       {supported && (
-        <>
-          <span className="mono">{chains[account.chainId as DestinationId].name}</span>
-          <Balances address={account.address} chainId={account.chainId as DestinationId} />
-        </>
+        <Balances address={account.address} chainId={account.chainId as DestinationId} />
       )}
-      <p role="status">{error?.message}</p>
-      <button className="button ghost" onClick={() => disconnect()}>
-        Disconnect
-      </button>
+      {error && <p role="status">{error.message}</p>}
     </div>
   );
 }

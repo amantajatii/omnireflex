@@ -64,7 +64,7 @@ function Rail({ close }: { close?: () => void }) {
   let icon = 0;
   return (
     <>
-      <Link href="/app" className={styles.brand} onClick={close}>
+      <Link href="/" className={styles.brand} onClick={close} title="Back to the OmniReflex site">
         <Mark />
         OmniReflex <span className="tag mono">TESTNET</span>
       </Link>
@@ -94,11 +94,7 @@ function Rail({ close }: { close?: () => void }) {
         ))}
       </nav>
       <div className={styles.bottom}>
-        <WalletCard />
-        <div className={styles.footer}>
-          <ThemeToggle />
-          <Link href="/">← Site</Link>
-        </div>
+        <WalletCard trailing={<ThemeToggle />} />
       </div>
     </>
   );
@@ -117,7 +113,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <Rail />
       </aside>
       <header className={styles.mobile}>
-        <Link href="/app" aria-label="OmniReflex overview">
+        <Link href="/" aria-label="OmniReflex site">
           <Mark />
         </Link>
         <span>{title}</span>
