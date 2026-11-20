@@ -72,7 +72,7 @@ export default function NewOrderFields({
     <>
       <fieldset>
         <legend>Order type</legend>
-        <div className={styles.chips}>
+        <div className={`${styles.chips} ${styles.kinds}`}>
           {Object.entries(kinds).map(([key, label]) => (
             <button
               type="button"
@@ -86,36 +86,42 @@ export default function NewOrderFields({
         </div>
         <p>{descriptions[kind]}</p>
       </fieldset>
-      <label>
-        Execute on
-        <select
-          value={execution}
-          onChange={(e) => void changeChain(Number(e.target.value) as DestinationId)}
-        >
-          {destinationIds.map((id) => (
-            <option key={id} value={id}>
-              {chains[id].name}
+      <div className={styles.pair}>
+        <label>
+          Execute on
+          <select
+            value={execution}
+            onChange={(e) => void changeChain(Number(e.target.value) as DestinationId)}
+          >
+            {destinationIds.map((id) => (
+              <option key={id} value={id}>
+                {chains[id].name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Trigger on
+          <select
+            value={remote ? 'remote' : 'local'}
+            onChange={(e) => {
+              setRemote(e.target.value === 'remote');
+              setLower('');
+              setUpper('');
+            }}
+          >
+            <option value="local">Same chain</option>
+            <option value="remote">
+              {chains[execution === 1301 ? 84532 : 1301].name} · cross-chain
             </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Trigger on
-        <select
-          value={remote ? 'remote' : 'local'}
-          onChange={(e) => {
-            setRemote(e.target.value === 'remote');
-            setLower('');
-            setUpper('');
-          }}
-        >
-          <option value="local">Same chain</option>
-          <option value="remote">
-            {chains[execution === 1301 ? 84532 : 1301].name} · cross-chain
-          </option>
-        </select>
-        <span className="muted">A swap on Base can fire an order on Unichain.</span>
-      </label>
+          </select>
+        </label>
+      </div>
+      {remote && (
+        <p className={styles.hint}>
+          A swap on {chains[trigger].name} fires this order on {chains[execution].name}.
+        </p>
+      )}
       <label>
         Side
         <select value={side} onChange={(e) => setSide(e.target.value as 'eth' | 'usd')}>
@@ -203,39 +209,40 @@ export default function NewOrderFields({
           </>
         )}
       </fieldset>
-      <fieldset>
-        <legend>Slippage</legend>
-        <div className={styles.chips}>
-          {['0.5', '1', '5'].map((n) => (
-            <button
-              type="button"
-              key={n}
-              aria-pressed={slippage === n}
-              onClick={() => setSlippage(n)}
-            >
-              {n}%
-            </button>
-          ))}
-        </div>
-        <label>
-          Custom slippage (%)
-          <input
-            inputMode="decimal"
-            value={slippage}
-            onChange={(e) => setSlippage(e.target.value)}
-          />
-        </label>
-      </fieldset>
-      <fieldset>
-        <legend>Expiry</legend>
-        <div className={styles.chips}>
-          {[1, 24, 168].map((n) => (
-            <button type="button" key={n} aria-pressed={hours === n} onClick={() => setHours(n)}>
-              {n === 168 ? '7 d' : `${n} h`}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      <div className={styles.pair}>
+        <fieldset>
+          <legend>Slippage</legend>
+          <div className={styles.chips}>
+            {['0.5', '1', '5'].map((n) => (
+              <button
+                type="button"
+                key={n}
+                aria-pressed={slippage === n}
+                onClick={() => setSlippage(n)}
+              >
+                {n}%
+              </button>
+            ))}
+            <input
+              className={styles.customSlippage}
+              aria-label="Custom slippage (%)"
+              inputMode="decimal"
+              value={slippage}
+              onChange={(e) => setSlippage(e.target.value)}
+            />
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Expiry</legend>
+          <div className={styles.chips}>
+            {[1, 24, 168].map((n) => (
+              <button type="button" key={n} aria-pressed={hours === n} onClick={() => setHours(n)}>
+                {n === 168 ? '7 d' : `${n} h`}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      </div>
     </>
   );
 }

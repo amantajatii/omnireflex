@@ -5,8 +5,6 @@ import { formatAmount, formatNumber } from '@/lib/format';
 import { chains, type DestinationId } from '@/lib/chains';
 import type { OrderParams } from '@/lib/order-encoding';
 import styles from './NewOrder.module.css';
-import { useMarket } from '@/lib/use-market';
-import NewOrderChart from './NewOrderChart';
 
 type Props = {
   params?: OrderParams;
@@ -19,25 +17,15 @@ type Props = {
   upper: string;
   trail: string;
   hours: number;
-  spot?: number;
   fee?: bigint;
   created?: { chain: DestinationId; id: bigint };
   watching: boolean;
 };
 export default function NewOrderPreview(p: Props) {
-  const { market, error } = useMarket(p.trigger);
-  const levels = [
-    ...(['stop', 'bracket'].includes(p.kind) ? [{ label: 'Stop', price: Number(p.lower) }] : []),
-    ...(['take', 'bracket'].includes(p.kind) ? [{ label: 'Take', price: Number(p.upper) }] : []),
-    ...(p.kind === 'trail' && p.spot
-      ? [{ label: 'Trail stop', price: p.spot * (1 - Number(p.trail) / 100) }]
-      : []),
-  ];
   const input = p.side === 'eth' ? 'rdETH' : 'rdUSD';
   return (
     <aside className={`panel ${styles.preview}`} aria-label="Order preview">
-      <span className="mono">LIVE PREVIEW</span>
-      <h2>Your price. Your exit.</h2>
+      <h2>Order summary</h2>
       <p>
         {p.params ? (
           <>
@@ -53,15 +41,6 @@ export default function NewOrderPreview(p: Props) {
           'Set an amount and trigger to preview your order.'
         )}
       </p>
-      <div>
-        <NewOrderChart
-          points={market?.points ?? []}
-          spot={p.spot}
-          levels={levels}
-          chainName={chains[p.trigger].name}
-        />
-        {(error || market?.error) && <p role="status">{error || market?.error}</p>}
-      </div>
       {p.params && (
         <details>
           <summary>Encoded values</summary>

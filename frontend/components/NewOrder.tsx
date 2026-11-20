@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useAccount, usePublicClient, useSwitchChain } from 'wagmi';
 import { erc20Abi, parseEther, type Hash } from 'viem';
 import { chains, type DestinationId } from '@/lib/chains';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatPrice } from '@/lib/format';
 import { deployments } from '@/lib/deployments';
 import { executorWriteAbi } from '@/lib/write-abi';
 import { useFeed } from '@/lib/feed';
@@ -12,13 +13,24 @@ import { useTransaction } from '@/lib/transactions';
 import { ConnectWallet } from './WalletCard';
 import { isSystemStale } from '@/lib/action-logic';
 import { capacityState, isHistorySyncing, orderCapacity, orderSteps } from './NewOrderState';
-import { PageHeader } from './PageHeader';
+import { useCandles } from '@/lib/use-candles';
+import { useMarket } from '@/lib/use-market';
+import type { Granularity } from '@/lib/server-candles';
+import TradingOrders from './TradingOrders';
 import NewOrderPreview from './NewOrderPreview';
 import NewOrderFields from './NewOrderFields';
 import { createdOrderId, useNewOrderReads } from './NewOrderReads';
 import styles from './NewOrder.module.css';
 
 const unixNow = () => Math.floor(Date.now() / 1000);
+const TradingChart = dynamic(() => import('./TradingChart'), {
+  ssr: false,
+  loading: () => (
+    <div className={styles.chartLoading} role="status">
+      Loading trading chart…
+    </div>
+  ),
+});
 export default function NewOrder() {
   const account = useAccount(),
     feed = useFeed(),
@@ -198,102 +210,170 @@ export default function NewOrder() {
         e.orderId === created.id &&
         e.eventName === 'OrderMirrored',
     );
+  const [granularity, setGranularity] = useState<Granularity>(60);
+  const candles = useCandles(granularity);
+  const { market, error: marketError } = useMarket(trigger);
+  const stats = candles.snapshot?.stats;
+  const mine = useMemo(
+    () => feed.orders.filter((row) => row.owner.toLowerCase() === account.address?.toLowerCase()),
+    [feed.orders, account.address],
+  );
+  const percent = (value: number | undefined) =>
+    value === undefined || !Number.isFinite(value)
+      ? '—'
+      : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   return (
     <div className={styles.page}>
-      <PageHeader
-        breadcrumb="Trade / New order"
-        title="Set it in motion."
-        subtitle="A swap crosses your price. OmniReflex takes it from there."
-      />
+      <div className={styles.heading}>
+        <h1>New order</h1>
+        <p>Price triggers watch the {chains[trigger].name} pool.</p>
+      </div>
+      <dl className={styles.ticker} aria-label="ETH/USD market ticker">
+        <div>
+          <dt>ETH / USD · Coinbase</dt>
+          <dd>{stats ? formatPrice(stats.last) : '—'}</dd>
+        </div>
+        <div>
+          <dt>24h change</dt>
+          <dd>{percent(stats ? (stats.last / stats.open - 1) * 100 : undefined)}</dd>
+        </div>
+        <div>
+          <dt>24h high</dt>
+          <dd>{stats ? formatPrice(stats.high) : '—'}</dd>
+        </div>
+        <div>
+          <dt>24h low</dt>
+          <dd>{stats ? formatPrice(stats.low) : '—'}</dd>
+        </div>
+        <div>
+          <dt>{trigger === 1301 ? 'Unichain' : 'Base'} pool · rdUSD</dt>
+          <dd>
+            {spot ? formatPrice(spot) : '—'}
+            {triggerStale && <small>Stale / unavailable</small>}
+          </dd>
+        </div>
+        <div>
+          <dt>Pool vs market</dt>
+          <dd>{percent(stats && spot ? (spot / stats.last - 1) * 100 : undefined)}</dd>
+        </div>
+      </dl>
       <div className={styles.layout}>
-        <form
-          className={`panel ${styles.form}`}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          <NewOrderFields
-            execution={execution}
+        <div className={styles.chartArea}>
+          <TradingChart
+            snapshot={candles.snapshot}
+            error={candles.error}
+            market={market}
+            marketError={marketError}
+            granularity={granularity}
+            setGranularity={setGranularity}
             trigger={trigger}
+            spot={spot}
             kind={kind}
-            setKind={setKind}
-            remote={remote}
-            setRemote={setRemote}
-            side={side}
-            setSide={setSide}
-            amount={amount}
-            setAmount={setAmount}
-            low={low}
-            high={high}
+            lower={low}
+            upper={high}
+            trail={trail}
             setLower={setLower}
             setUpper={setUpper}
-            trail={trail}
-            setTrail={setTrail}
-            slippage={slippage}
-            setSlippage={setSlippage}
-            hours={hours}
-            setHours={setHours}
-            spot={spot}
-            balance={balance}
-            pool={pool}
-            inputSymbol={inputSymbol}
-            changeChain={changeChain}
+            orders={mine}
           />
-          <div className={styles.notice} aria-live="polite">
-            {localError ||
-              (account.isConnected
-                ? error ||
-                  capacityError ||
-                  `${capacity.pool}/32 tracked in pool · ${capacity.owner}/4 for this wallet`
-                : 'Connect a wallet to check balances, approve tokens and create your order.')}
-            {[staleWarning, capacityError ? '' : capacityWarning].filter(Boolean).map((text) => (
-              <p key={text} className={styles.warning} role="status">
-                {text}
-              </p>
-            ))}
-            {reads.isError && (
-              <p>
-                Wallet reads failed.{' '}
-                <button type="button" onClick={() => void reads.refetch()}>
-                  Retry
-                </button>
-              </p>
+        </div>
+        <div className={styles.orderEntry}>
+          <form
+            className={`panel ${styles.form}`}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
+          >
+            <NewOrderFields
+              execution={execution}
+              trigger={trigger}
+              kind={kind}
+              setKind={setKind}
+              remote={remote}
+              setRemote={setRemote}
+              side={side}
+              setSide={setSide}
+              amount={amount}
+              setAmount={setAmount}
+              low={low}
+              high={high}
+              setLower={setLower}
+              setUpper={setUpper}
+              trail={trail}
+              setTrail={setTrail}
+              slippage={slippage}
+              setSlippage={setSlippage}
+              hours={hours}
+              setHours={setHours}
+              spot={spot}
+              balance={balance}
+              pool={pool}
+              inputSymbol={inputSymbol}
+              changeChain={changeChain}
+            />
+            <div className={styles.notice} aria-live="polite">
+              {localError ||
+                (account.isConnected
+                  ? error ||
+                    capacityError ||
+                    `${capacity.pool}/32 tracked in pool · ${capacity.owner}/4 for this wallet`
+                  : 'Connect a wallet to check balances, approve tokens and create your order.')}
+              {[staleWarning, capacityError ? '' : capacityWarning].filter(Boolean).map((text) => (
+                <p key={text} className={styles.warning} role="status">
+                  {text}
+                </p>
+              ))}
+              {reads.isError && (
+                <p>
+                  Wallet reads failed.{' '}
+                  <button type="button" onClick={() => void reads.refetch()}>
+                    Retry
+                  </button>
+                </p>
+              )}
+            </div>
+            <ol className={styles.steps}>
+              {steps.labels.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+            </ol>
+            {account.isConnected ? (
+              <button className="button" type="submit" disabled={disabled}>
+                {busy
+                  ? 'Waiting for transaction…'
+                  : approvalNeeded
+                    ? `Approve ${inputSymbol}`
+                    : 'Create order →'}
+              </button>
+            ) : (
+              <ConnectWallet />
             )}
-          </div>
-          <ol className={styles.steps}>
-            {steps.labels.map((label) => (
-              <li key={label}>{label}</li>
-            ))}
-          </ol>
-          {account.isConnected ? (
-            <button className="button" type="submit" disabled={disabled}>
-              {busy
-                ? 'Waiting for transaction…'
-                : approvalNeeded
-                  ? `Approve ${inputSymbol}`
-                  : 'Create order →'}
-            </button>
-          ) : (
-            <ConnectWallet />
-          )}
-        </form>
-        <NewOrderPreview
-          params={params}
-          kind={kind}
-          side={side}
-          amount={amount}
-          execution={execution}
-          trigger={trigger}
-          lower={low}
-          upper={high}
-          trail={trail}
-          hours={hours}
-          spot={spot}
-          fee={fee}
-          created={created}
-          watching={watching}
-        />
+          </form>
+          <NewOrderPreview
+            params={params}
+            kind={kind}
+            side={side}
+            amount={amount}
+            execution={execution}
+            trigger={trigger}
+            lower={low}
+            upper={high}
+            trail={trail}
+            hours={hours}
+            fee={fee}
+            created={created}
+            watching={watching}
+          />
+        </div>
+        <div className={styles.ordersArea}>
+          <TradingOrders
+            orders={mine}
+            connected={!!account.address}
+            loading={feed.loading}
+            error={feed.historyError}
+          />
+        </div>
       </div>
     </div>
   );

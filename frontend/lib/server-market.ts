@@ -3,10 +3,10 @@ import { deployments } from './deployments';
 import { retry } from './logs';
 import { tickPrice } from './model';
 import { createSWRCache } from './swr-cache';
-import { timestamp } from './timestamps';
+import { interpolateTimestamp, timestamp } from './timestamps';
 import { poolSwapEvent } from './write-abi';
 export type MarketSnapshot = {
-  points: { price: number; tick: number }[];
+  points: { price: number; tick: number; time: number }[];
   lastSwap?: number;
   updatedAt: number;
   error?: string;
@@ -44,14 +44,21 @@ function marketCache(chainId: DestinationId) {
           (a.logIndex ?? 0) - (b.logIndex ?? 0),
       );
       const latest = logs.at(-1);
+      const [beginTime, headTime] = logs.length
+        ? await Promise.all([timestamp(chainId, begin, false), timestamp(chainId, head, false)])
+        : [0, 0];
+      // shortcut: swap times are interpolated, use exact block times if sub-block timing is needed.
+      const time = (block: bigint) => interpolateTimestamp(block, begin, head, beginTime, headTime);
       snapshot = {
-        points: logs
-          .slice(-120)
-          .map((log) => ({ tick: log.args.tick, price: tickPrice(log.args.tick) })),
+        points: logs.slice(-120).map((log) => ({
+          tick: log.args.tick,
+          price: tickPrice(log.args.tick),
+          time: time(log.blockNumber!),
+        })),
         lastSwap:
           latest?.blockNumber === undefined || latest.blockNumber === null
             ? undefined
-            : await timestamp(chainId, latest.blockNumber),
+            : time(latest.blockNumber),
         updatedAt: Date.now(),
       };
     } catch {

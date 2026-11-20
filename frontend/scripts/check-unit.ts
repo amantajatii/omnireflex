@@ -6,4 +6,6 @@ await import('./check-scanner');
 
 await import('./check-phase2');
 await import('./check-market');
+await import('./check-candles');
+await import('../lib/trading-chart.test');
 await import('../components/NewOrderState.test');

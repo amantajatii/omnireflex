@@ -2,7 +2,19 @@ import { clients, type ChainId } from './chains';
 import type { Log } from 'viem';
 import type { Stage } from './model';
 const blocks = new Map<string, Promise<number>>();
-export async function timestamp(chainId: ChainId, block: bigint) {
+export function interpolateTimestamp(
+  block: bigint,
+  begin: bigint,
+  head: bigint,
+  beginTime: number,
+  headTime: number,
+) {
+  if (head <= begin) return headTime;
+  const fraction = Math.max(0, Math.min(1, Number(block - begin) / Number(head - begin)));
+  return Math.floor(beginTime + fraction * (headTime - beginTime));
+}
+export async function timestamp(chainId: ChainId, block: bigint, cache = true) {
+  if (!cache) return Number((await clients[chainId].getBlock({ blockNumber: block })).timestamp);
   const key = `${chainId}:${block}`;
   let promise = blocks.get(key);
   if (promise) blocks.delete(key);

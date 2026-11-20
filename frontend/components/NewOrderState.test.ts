@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import '../lib/chart-scale.test';
 import { capacityState, CAPACITY_WARNING, orderCapacity, orderSteps } from './NewOrderState';
 import type { OrderRow, ReactiveEvent } from '@/lib/model';
 
