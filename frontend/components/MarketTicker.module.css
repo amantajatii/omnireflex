@@ -25,6 +25,12 @@
     monospace;
   overflow-wrap: anywhere;
 }
+.ticker dd[data-trend='up'] {
+  color: var(--rx-up);
+}
+.ticker dd[data-trend='down'] {
+  color: var(--rx-down);
+}
 .ticker small {
   display: block;
   font-size: 10px;

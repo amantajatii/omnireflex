@@ -18,6 +18,14 @@
 .toggle button + button {
   border-left: 1px solid var(--rx-line-strong);
 }
+.toggle button[aria-pressed='true']:first-child {
+  background: var(--rx-down);
+  color: var(--rx-on-signal);
+}
+.toggle button[aria-pressed='true']:last-child {
+  background: var(--rx-up);
+  color: var(--rx-on-signal);
+}
 .flow {
   margin: 0;
   font-size: 12px;

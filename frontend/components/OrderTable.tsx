@@ -2,6 +2,16 @@
 import { chains, chainTag, chainShortName } from '@/lib/chains';
 import { amount, orderKey, short, type OrderRow } from '@/lib/model';
 import styles from './Dashboard.module.css';
+/** Executed reads green, problems red, Open amber; Cancelled and Expired stay neutral. */
+const statusTone = (status: string) =>
+  status === 'Executed'
+    ? 'live'
+    : status === 'Open'
+      ? 'pending'
+      : status === 'Failed' || status === 'Exhausted'
+        ? 'failed'
+        : '';
+
 export default function OrderTable({
   orders,
   select,
@@ -65,9 +75,7 @@ export default function OrderTable({
               <small>{row.inputSymbol}</small>
             </td>
             <td data-label="Status">
-              <span
-                className={`${styles.pill} ${row.status === 'Executed' ? 'live' : row.status === 'Open' ? 'pending' : row.status === 'Failed' ? 'failed' : ''}`}
-              >
+              <span className={`${styles.pill} ${statusTone(row.status)}`}>
                 <i className="dot" />
                 {row.status}
               </span>

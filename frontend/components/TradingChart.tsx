@@ -65,6 +65,19 @@ type Props = {
   orders: OrderRow[];
 };
 type Draft = { key: 'lower' | 'upper'; price: number; line: IPriceLine };
+type Palette = { ink: string; paper: string; up: string; down: string; onSignal: string };
+/** Exit levels below spot read as downside (red), above as upside (green); the pool stays ink. */
+const lineTone = (title: string) =>
+  /Take|Breakout/.test(title) ? 'up' : /Stop|Dip|Trail/.test(title) ? 'down' : 'ink';
+const lineColors = (title: string, palette: Palette) => {
+  const tone = lineTone(title);
+  const color = tone === 'ink' ? palette.ink : palette[tone];
+  return {
+    color,
+    axisLabelColor: color,
+    axisLabelTextColor: tone === 'ink' ? palette.paper : palette.onSignal,
+  };
+};
 type ChartState = {
   chart: IChartApi;
   candles: ISeriesApi<'Candlestick'>;
@@ -77,6 +90,7 @@ type ChartState = {
   timeframe?: Granularity;
   fitted: boolean;
   ink: string;
+  palette: Palette;
 };
 
 export default function TradingChart(props: Props) {
@@ -130,6 +144,13 @@ export default function TradingChart(props: Props) {
         drafts: [],
         fitted: false,
         ink: '#151515',
+        palette: {
+          ink: '#151515',
+          paper: '#fbfbfb',
+          up: '#15803d',
+          down: '#c62828',
+          onSignal: '#fff',
+        },
       };
       api.current = state;
     } catch {
@@ -145,6 +166,14 @@ export default function TradingChart(props: Props) {
         paper = color('--rx-paper'),
         soft = color('--rx-soft');
       state.ink = ink;
+      state.palette = {
+        ink,
+        paper,
+        up: color('--rx-up'),
+        down: color('--rx-down'),
+        onSignal: color('--rx-on-signal'),
+      };
+      const { up, down } = state.palette;
       state.chart.applyOptions({
         layout: {
           background: { type: ColorType.Solid, color: paper },
@@ -163,17 +192,17 @@ export default function TradingChart(props: Props) {
         },
       });
       state.candles.applyOptions({
-        upColor: paper,
-        downColor: ink,
-        borderUpColor: ink,
-        borderDownColor: ink,
-        wickUpColor: ink,
-        wickDownColor: ink,
+        upColor: up,
+        downColor: down,
+        borderUpColor: up,
+        borderDownColor: down,
+        wickUpColor: up,
+        wickDownColor: down,
       });
       state.volume.applyOptions({ color: color('--rx-muted') });
       state.pool.applyOptions({ color: soft });
       state.lines.forEach((line) =>
-        line.applyOptions({ color: ink, axisLabelColor: ink, axisLabelTextColor: paper }),
+        line.applyOptions(lineColors(line.options().title, state.palette)),
       );
       state.markers.setMarkers(
         state.markers.markers().map((marker) => ({ ...marker, color: ink })),
@@ -351,7 +380,7 @@ export default function TradingChart(props: Props) {
       const result = state.candles.createPriceLine({
         price,
         title,
-        color: state.ink,
+        ...lineColors(title, state.palette),
         lineWidth: 1,
         lineStyle,
         axisLabelVisible: true,
@@ -438,7 +467,7 @@ export default function TradingChart(props: Props) {
         )}
       </div>
       <div className={styles.legend}>
-        <span>Hollow up / filled down · Coinbase ETH/USD · UTC</span>
+        <span>Green up / red down · Coinbase ETH/USD · UTC</span>
         <span>
           {props.exits
             ? `Dotted: trigger pool · Drag ${props.side === 'usd' ? 'Dip / Breakout' : 'Stop / Take'} draft levels or edit price inputs`

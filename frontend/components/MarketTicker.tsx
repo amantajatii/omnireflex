@@ -8,6 +8,18 @@ const percent = (value: number | undefined) =>
     ? '—'
     : `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
+/** Green for gains, red for losses; flat and unknown stay neutral. */
+const trend = (value: number | undefined) =>
+  value === undefined || !Number.isFinite(value) || Number(value.toFixed(2)) === 0
+    ? undefined
+    : value > 0
+      ? 'up'
+      : 'down';
+
+function Change({ value }: { value: number | undefined }) {
+  return <dd data-trend={trend(value)}>{percent(value)}</dd>;
+}
+
 /** ETH/USD 24h stats from Coinbase next to the demo pool price that triggers orders. */
 export default function MarketTicker({
   stats,
@@ -28,7 +40,7 @@ export default function MarketTicker({
       </div>
       <div>
         <dt>24h change</dt>
-        <dd>{percent(stats ? (stats.last / stats.open - 1) * 100 : undefined)}</dd>
+        <Change value={stats ? (stats.last / stats.open - 1) * 100 : undefined} />
       </div>
       <div>
         <dt>24h high</dt>
@@ -47,7 +59,7 @@ export default function MarketTicker({
       </div>
       <div>
         <dt>Pool vs market</dt>
-        <dd>{percent(stats && spot ? (spot / stats.last - 1) * 100 : undefined)}</dd>
+        <Change value={stats && spot ? (spot / stats.last - 1) * 100 : undefined} />
       </div>
     </dl>
   );
