@@ -10,6 +10,7 @@ import { poolSwapEvent, swapRouterAbi } from '@/lib/write-abi';
 import { tickPrice } from '@/lib/model';
 import { formatAmount, formatNumber, formatPrice } from '@/lib/format';
 import { useTransaction } from '@/lib/transactions';
+import SideToggle from './SideToggle';
 import { ConnectWallet } from './WalletCard';
 import Select from './Select';
 import styles from './Market.module.css';
@@ -147,14 +148,9 @@ export function MarketSwap({
             onChainChange?.(next);
           }}
         />
-        <Select
-          label="Direction"
+        <SideToggle
           value={sellEth ? 'eth' : 'usd'}
           disabled={busy}
-          options={[
-            { value: 'eth', label: 'Sell rdETH for rdUSD' },
-            { value: 'usd', label: 'Sell rdUSD for rdETH' },
-          ]}
           onChange={(next) => {
             const eth = next === 'eth';
             setSellEth(eth);

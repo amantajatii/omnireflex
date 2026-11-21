@@ -1,0 +1,25 @@
+.side {
+  display: grid;
+  gap: 8px;
+}
+.toggle {
+  --segment-gap: 0;
+  --segment-padding: 0 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--rx-line-strong);
+}
+.toggle button {
+  min-height: 42px;
+  border: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.toggle button + button {
+  border-left: 1px solid var(--rx-line-strong);
+}
+.flow {
+  margin: 0;
+  font-size: 12px;
+  color: var(--rx-soft);
+}

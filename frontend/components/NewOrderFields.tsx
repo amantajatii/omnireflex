@@ -4,6 +4,7 @@ import { formatAmount, formatPrice } from '@/lib/format';
 import { chains, destinationIds, type DestinationId } from '@/lib/chains';
 import Select from './Select';
 import Segmented from './Segmented';
+import SideToggle from './SideToggle';
 import styles from './NewOrder.module.css';
 type Props = {
   execution: DestinationId;
@@ -61,6 +62,7 @@ export default function NewOrderFields({
 }: Props) {
   return (
     <>
+      <SideToggle value={side} onChange={setSide} />
       <div className={styles.pair}>
         <Select
           label="Execute on"
@@ -90,15 +92,6 @@ export default function NewOrderFields({
           A swap on {chains[trigger].name} fires this order on {chains[execution].name}.
         </p>
       )}
-      <Select
-        label="Side"
-        value={side}
-        options={[
-          { value: 'eth', label: 'Sell rdETH for rdUSD' },
-          { value: 'usd', label: 'Sell rdUSD for rdETH' },
-        ]}
-        onChange={setSide}
-      />
       <fieldset>
         <legend>Amount · {inputSymbol}</legend>
         <div className={styles.row}>
