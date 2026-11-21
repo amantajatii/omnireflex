@@ -77,7 +77,7 @@ test('deployment records validate chain, addresses, key and hash', () => {
     const rec = loadDestRecord(dir, id);
     assert.equal(rec.chainId, id);
     for (const change of [{ chainId: 1 }, { poolId: `0x${'00'.repeat(32)}` },
-      { rdETH: rec.rdUSD }, { swapRouter: 'bad' }, { poolKey: { ...rec.poolKey, tickSpacing: 0 } }]) {
+      { rdETH: rec.rdUSD }, { executor: 'bad' }, { executor: '0x0000000000000000000000000000000000000000' }, { swapRouter: 'bad' }, { poolKey: { ...rec.poolKey, tickSpacing: 0 } }]) {
       assert.throws(() => validateDest({ ...rec, ...change }, id));
     }
   }

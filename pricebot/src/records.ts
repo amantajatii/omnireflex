@@ -33,7 +33,7 @@ export function validateDest(rec: Record<string, any>, id: number) {
   ));
   if (typeof rec.poolId !== 'string' || rec.poolId.toLowerCase() !== poolId) throw new Error('invalid poolId');
   return { chainId: id, poolKey, poolId: poolId as Hex, rdETH, rdUSD,
-    poolManager: address(rec, 'poolManager'), swapRouter: address(rec, 'swapRouter') };
+    executor: address(rec, 'executor'), poolManager: address(rec, 'poolManager'), swapRouter: address(rec, 'swapRouter') };
 }
 export const loadDestRecord = (dir: string, id: number) => validateDest(read(dir, id), id);
 export const loadReactiveRecord = (dir: string) => address(read(dir, 5318007), 'reactive');

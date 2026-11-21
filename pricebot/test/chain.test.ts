@@ -51,3 +51,25 @@ test('a failing chain RPC does not block the other chain', async (t) => {
   assert.ok(health[0].lastError);
   assert.ok(health[1].poolPrice);
 });
+
+test('heartbeat failure is recorded separately and price-following step continues', async (t) => {
+  const abort = new AbortController();
+  const health = newHealth();
+  const messages: string[] = [];
+  t.mock.method(globalThis, 'fetch', async (_url: string, options: RequestInit) => {
+    const request = JSON.parse(String(options.body));
+    if (request.method === 'eth_gasPrice') throw new Error('heartbeat gas RPC offline');
+    assert.equal(request.method, 'eth_call');
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id,
+      result: `0x${priceToSqrtPriceX96(2000, false).toString(16).padStart(64, '0')}` }));
+  });
+  t.mock.method(console, 'log', (message: string) => {
+    messages.push(message);
+    if (message.includes('chain 1301 dry-run')) abort.abort();
+  });
+  await runChain(loadDestRecord(cfg.recordsDir, 1301), { ...cfg, heartbeatEnabled: true },
+    undefined, health, async () => 2500, () => false, abort.signal);
+  assert.ok(health.heartbeat.lastError);
+  assert.equal(health.lastError, null);
+  assert.ok(messages.some(m => m.includes('intendedStep=2015')));
+});

@@ -3,12 +3,13 @@ import type { PrivateKeyAccount } from 'viem/accounts';
 import { poolAbi, swapAbi, tokenAbi } from './abi.ts';
 import { decodeSlot0, decide, priceToSqrtPriceX96, slot0Slot, sqrtPriceX96ToPrice } from './math.ts';
 import { createTransactions } from './transactions.ts';
+import { createHeartbeat, newHeartbeatHealth } from './heartbeat.ts';
 import { log, runLoop } from './runtime.ts';
 import type { Config } from './config.ts';
 import type { DestRecord } from './records.ts';
 
 export const newHealth = () => ({ poolPrice: null as number | null, lastSwapAt: null as number | null,
-  lastTx: null as string | null, lastError: null as string | null, swaps: 0 });
+  lastTx: null as string | null, lastError: null as string | null, swaps: 0, heartbeat: newHeartbeatHealth() });
 
 export function runChain(rec: DestRecord, cfg: Config, account: PrivateKeyAccount | undefined,
   health: ReturnType<typeof newHealth>, feed: () => Promise<number | null>,
@@ -20,6 +21,7 @@ export function runChain(rec: DestRecord, cfg: Config, account: PrivateKeyAccoun
   const client = createPublicClient({ chain, transport });
   const wallet = account ? createWalletClient({ chain, transport, account }) : undefined;
   const tx = wallet ? createTransactions(client, wallet, rec, cfg, signal, paused) : undefined;
+  const heartbeat = createHeartbeat(client, tx, rec, cfg, account?.address, health.heartbeat, paused, signal);
   const orientation = rec.rdETH.toLowerCase() === rec.poolKey.currency0.toLowerCase();
   const slot = slot0Slot(rec.poolId);
   async function readPool() {
@@ -34,6 +36,7 @@ export function runChain(rec: DestRecord, cfg: Config, account: PrivateKeyAccoun
     await tx?.approve();
     const reference = await feed();
     if (signal.aborted) return;
+    await heartbeat(reference);
     const current = await readPool();
     if (reference === null) { log(`chain ${rec.chainId} pool=${health.poolPrice} reference unavailable`); return; }
     const poolPrice = health.poolPrice!;

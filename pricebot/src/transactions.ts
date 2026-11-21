@@ -1,4 +1,4 @@
-import { maxUint256, type PublicClient, type WalletClient, type Hash, type TransactionReceipt } from 'viem';
+import { maxUint256, type PublicClient, type WalletClient, type Hash, type Address, type TransactionReceipt } from 'viem';
 import { tokenAbi } from './abi.ts';
 import type { Config } from './config.ts';
 import type { DestRecord } from './records.ts';
@@ -40,17 +40,20 @@ export function createTransactions(client: PublicClient, wallet: WalletClient, r
   }
   async function approve(): Promise<void> {
     for (const [token, limit] of [[rec.rdETH, cfg.maxInputEth], [rec.rdUSD, cfg.maxInputUsd]] as const) {
-      if (signal.aborted || paused()) return;
-      const allowance = await client.readContract({ address: token, abi: tokenAbi, functionName: 'allowance',
-        args: [wallet.account!.address, rec.swapRouter] });
-      if (allowance >= limit) continue;
-      const gasPrice = await client.getGasPrice();
-      if (gasPrice > cfg.maxGas) return;
-      const { request, result } = await client.simulateContract({ account: wallet.account!, address: token,
-        abi: tokenAbi, functionName: 'approve', args: [rec.swapRouter, maxUint256], gasPrice });
-      if (!result) throw new Error('token approval returned false');
-      await send(request);
+      await ensureAllowance(token, rec.swapRouter, limit);
     }
   }
-  return { settle, send, approve };
+  async function ensureAllowance(token: Address, spender: Address, limit: bigint): Promise<void> {
+    if (signal.aborted || paused()) return;
+    const allowance = await client.readContract({ address: token, abi: tokenAbi, functionName: 'allowance',
+      args: [wallet.account!.address, spender] });
+    if (allowance >= limit) return;
+    const gasPrice = await client.getGasPrice();
+    if (gasPrice > cfg.maxGas) return;
+    const { request, result } = await client.simulateContract({ account: wallet.account!, address: token,
+      abi: tokenAbi, functionName: 'approve', args: [spender, maxUint256], gasPrice });
+    if (!result) throw new Error('token approval returned false');
+    await send(request);
+  }
+  return { settle, send, approve, ensureAllowance };
 }

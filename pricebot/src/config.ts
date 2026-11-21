@@ -40,8 +40,22 @@ export function loadConfig(env: Env = process.env) {
   if (!chains.length || chains.some((id) => ![1301, 84532].includes(id)) || new Set(chains).size !== chains.length) {
     throw new Error('CHAINS must contain unique supported chain IDs');
   }
+  if (env.HEARTBEAT_ENABLED !== undefined && !['0', '1'].includes(env.HEARTBEAT_ENABLED)) throw new Error('invalid HEARTBEAT_ENABLED');
+  const heartbeatEnabled = env.HEARTBEAT_ENABLED === '1';
+  const heartbeatChains = (env.HEARTBEAT_CHAINS ?? '1301').split(',').map(id => Number(id.trim()));
+  // Only enforce the subset when enabled, so a disabled heartbeat never breaks e.g. CHAINS=84532.
+  if (heartbeatEnabled && (heartbeatChains.some(id => !chains.includes(id))
+    || new Set(heartbeatChains).size !== heartbeatChains.length)) {
+    throw new Error('HEARTBEAT_CHAINS must be a unique subset of CHAINS');
+  }
   const cfg = {
     dryRun, privateKey, chains,
+    heartbeatEnabled, heartbeatChains,
+    heartbeatIntervalMs: number(env, 'HEARTBEAT_INTERVAL_MS', 3 * 3600000, true),
+    heartbeatTtlMs: number(env, 'HEARTBEAT_TTL_MS', 2 * 3600000, true),
+    heartbeatAmount: units(env, 'HEARTBEAT_AMOUNT_ETH', '0.01'),
+    heartbeatBandBps: number(env, 'HEARTBEAT_BAND_BPS', 20),
+    heartbeatSlippageBps: number(env, 'HEARTBEAT_SLIPPAGE_BPS', 300, true),
     recordsDir: resolve(env.RECORDS_DIR ?? resolve(BOT_DIR, '../contracts/deployments')),
     rpc: {
       1301: url(env, 'UNICHAIN_RPC_URL', 'https://unichain-sepolia-rpc.publicnode.com'),
@@ -59,6 +73,11 @@ export function loadConfig(env: Env = process.env) {
   };
   if (cfg.priceMin >= cfg.priceMax || cfg.maxStepBps >= 10000 || cfg.port > 65535) {
     throw new Error('invalid price bounds, MAX_STEP_BPS, or PORT');
+  }
+  if (cfg.heartbeatTtlMs < 1000 || cfg.heartbeatTtlMs >= cfg.heartbeatIntervalMs
+    || cfg.heartbeatAmount < 10n ** 16n || cfg.heartbeatAmount >= 2n ** 128n
+    || cfg.heartbeatBandBps >= 10000 || cfg.heartbeatSlippageBps >= 10000) {
+    throw new Error('invalid heartbeat TTL, amount, band, or slippage');
   }
   return cfg;
 }
