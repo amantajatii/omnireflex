@@ -130,7 +130,10 @@ function harness(orders: { status: number; expiry: bigint; fee?: bigint; refund?
             { name: 'trailTicks', type: 'uint24' }] }, { type: 'uint64' }], [params.trigger, params.expiry]) }] };
     },
   };
-  const wallet = { account: { address: owner }, writeContract: async ({ functionName }: any) => {
+  const account = { address: owner, type: 'local' };
+  const wallet = { account, writeContract: async ({ functionName, account: signer }: any) => {
+    // The executor simulation carries a bare address; broadcasting must still sign with the local account.
+    assert.equal(signer, account);
     calls.push(`send:${functionName}`); return '0x01';
   } };
   const config = { ...cfg, dryRun: false, ...changes };

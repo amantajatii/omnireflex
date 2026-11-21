@@ -33,7 +33,8 @@ export function createTransactions(client: PublicClient, wallet: WalletClient, r
     if (signal.aborted || paused()) throw new Error('transaction stopped: paused or shutting down');
     // A failed RPC response may still mean the node accepted the transaction.
     broadcastUncertain = true;
-    const hash = await wallet.writeContract(request);
+    // Always sign with the local account: a bare address here would fall back to eth_sendTransaction.
+    const hash = await wallet.writeContract({ ...request, account: wallet.account! });
     broadcastUncertain = false;
     pending = { hash, onReceipt };
     await settle();
