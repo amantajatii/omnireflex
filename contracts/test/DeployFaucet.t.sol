@@ -174,6 +174,8 @@ contract DeployFaucetTest is Test {
         require(!vm.exists(path), "Test record path already exists");
         string memory json =
             vm.readFile(string.concat(vm.projectRoot(), "/deployments/", vm.toString(block.chainid), ".json"));
+        // The live record already carries `faucet`; rename it so the fixture models a pre-faucet deployment.
+        json = vm.replace(json, '"faucet"', '"liveFaucet"');
         vm.serializeJson("faucet-fixture", json);
         vm.serializeAddress("faucet-fixture", "rdETH", address(eth));
         vm.serializeAddress("faucet-fixture", "rdUSD", address(usd));
