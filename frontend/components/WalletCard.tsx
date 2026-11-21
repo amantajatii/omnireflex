@@ -6,6 +6,7 @@ import { chains, type DestinationId } from '@/lib/chains';
 import { deployments } from '@/lib/deployments';
 import { amount, short } from '@/lib/model';
 import styles from './App.module.css';
+import Segmented from './Segmented';
 const subscribe = () => () => {};
 export const useMounted = () =>
   useSyncExternalStore(
@@ -151,19 +152,18 @@ export default function WalletCard({ trailing }: { trailing?: ReactNode }) {
           </button>
         </div>
       )}
-      <div className={styles.switcher} role="group" aria-label="Wallet network">
-        {([1301, 84532] as const).map((id) => (
-          <button
-            type="button"
-            key={id}
-            aria-pressed={account.chainId === id}
-            disabled={isPending}
-            onClick={() => switchChain({ chainId: id })}
-          >
-            {chains[id].name.replace(' Sepolia', '')}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Wallet network"
+        value={account.chainId ?? 0}
+        size="sm"
+        className={styles.switcher}
+        options={([1301, 84532] as const).map((id) => ({
+          value: id,
+          label: chains[id].name.replace(' Sepolia', ''),
+          disabled: isPending,
+        }))}
+        onChange={(id) => switchChain({ chainId: id })}
+      />
       {supported && (
         <Balances address={account.address} chainId={account.chainId as DestinationId} />
       )}

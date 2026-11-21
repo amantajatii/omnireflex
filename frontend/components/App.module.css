@@ -157,27 +157,17 @@
   padding: 4px 8px;
   font-size: 11px;
 }
-.switcher {
+.switcher[role='group'] {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
   border: 1px solid var(--rx-line-strong);
-}
-.switcher button {
-  border: 0;
-  background: var(--rx-paper);
-  color: var(--rx-soft);
-  padding: 6px;
-  font-size: 11px;
+  --segment-border: 0;
+  --segment-background: var(--rx-paper);
+  --segment-color: var(--rx-soft);
 }
 .switcher button + button {
   border-left: 1px solid var(--rx-line-strong);
-}
-.switcher button:not([aria-pressed='true']):hover:not(:disabled) {
-  color: var(--rx-ink);
-}
-.switcher button[aria-pressed='true'] {
-  background: var(--rx-ink);
-  color: var(--rx-paper);
 }
 .balances {
   display: grid;

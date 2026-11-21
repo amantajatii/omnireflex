@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { chainShortName } from '@/lib/chains';
 import { useFeed } from '@/lib/feed';
 import { readIndexer } from '@/lib/indexer';
 import { type OrderRow } from '@/lib/model';
@@ -50,7 +51,7 @@ export default function LatestLoop({ row, select }: { row: OrderRow; select: () 
   return (
     <button className={styles.loop} onClick={select}>
       <span>
-        #{String(row.id)} · {row.chainId === 1301 ? 'Unichain' : 'Base'}
+        #{String(row.id)} · {chainShortName(row.chainId)}
       </span>
       <span className="mono">
         T0 Swap {stage(timings?.[0], row.origin?.timestamp)} → T1 Trigger{' '}

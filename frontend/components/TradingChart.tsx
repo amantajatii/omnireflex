@@ -17,7 +17,7 @@ import {
   type UTCTimestamp,
   type AutoscaleInfo,
 } from 'lightweight-charts';
-import { chains, type DestinationId } from '@/lib/chains';
+import { chains, chainTag, type DestinationId } from '@/lib/chains';
 import type { CandleSnapshot, Granularity } from '@/lib/server-candles';
 import type { MarketSnapshot } from '@/lib/server-market';
 import type { OrderRow } from '@/lib/model';
@@ -29,6 +29,7 @@ import {
   validPrice,
 } from '@/lib/trading-chart';
 import styles from './TradingChart.module.css';
+import Segmented from './Segmented';
 
 const timeframes = [
   [60, '1m'],
@@ -359,7 +360,7 @@ export default function TradingChart(props: Props) {
       return result;
     };
     if (validPrice(props.spot))
-      line(props.spot, `${props.trigger === 1301 ? 'UNI' : 'BASE'} Pool`, LineStyle.Solid);
+      line(props.spot, `${chainTag(props.trigger)} Pool`, LineStyle.Solid);
     for (const [key, title, enabled, price] of [
       [
         'lower',
@@ -414,18 +415,14 @@ export default function TradingChart(props: Props) {
     <section className={styles.panel} aria-label="ETH/USD trading chart">
       <div className={styles.toolbar}>
         <strong>ETH / USD</strong>
-        <div className={styles.timeframes} role="group" aria-label="Candle timeframe">
-          {timeframes.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={props.granularity === value}
-              onClick={() => props.setGranularity(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Candle timeframe"
+          value={props.granularity}
+          options={timeframes.map(([value, label]) => ({ value, label }))}
+          onChange={props.setGranularity}
+          size="sm"
+          className={styles.timeframes}
+        />
       </div>
       <div className={styles.plot}>
         <div

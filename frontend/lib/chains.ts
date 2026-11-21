@@ -36,6 +36,15 @@ export const chains = {
   }),
 } as const;
 export type ChainId = keyof typeof chains;
+export const chainMetadata = {
+  1301: { shortName: 'Unichain', tag: 'UNI' },
+  84532: { shortName: 'Base', tag: 'BASE' },
+  5318007: { shortName: 'Lasna', tag: 'LASNA' },
+} as const satisfies Record<ChainId, { shortName: string; tag: string }>;
+export const chainShortName = (id: number | string): string =>
+  chainMetadata[Number(id) as ChainId]?.shortName ?? `Chain ${id}`;
+export const chainTag = (id: number | string): string =>
+  chainMetadata[Number(id) as ChainId]?.tag ?? String(id);
 export type DestinationId = 1301 | 84532;
 export const destinationIds = [1301, 84532] as const;
 const makeClient = (id: ChainId) =>

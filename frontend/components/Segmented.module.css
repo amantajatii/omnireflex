@@ -1,0 +1,35 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--segment-gap, 7px);
+}
+.group button {
+  border: var(--segment-border, 1px solid var(--rx-line-strong));
+  background: var(--segment-background, var(--rx-raise));
+  color: var(--segment-color, var(--rx-ink));
+  padding: var(--segment-padding, 7px 9px);
+  font-size: 12px;
+  transition:
+    color 150ms var(--rx-ease),
+    background-color 150ms var(--rx-ease);
+}
+.sm button {
+  padding: var(--segment-padding, 6px);
+  font-size: 11px;
+}
+.group button:not([aria-pressed='true']):hover:not(:disabled) {
+  background: var(--segment-hover-background, var(--segment-background, var(--rx-raise)));
+  color: var(--rx-ink);
+}
+.group button[aria-pressed='true'],
+.group button[aria-pressed='true']:hover {
+  background: var(--rx-ink);
+  color: var(--rx-paper);
+}
+.group button:focus-visible {
+  outline: 2px solid var(--rx-ink);
+  outline-offset: 2px;
+}
+.group button:disabled {
+  opacity: 0.5;
+}

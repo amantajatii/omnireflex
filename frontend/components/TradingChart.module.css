@@ -14,24 +14,12 @@
   font-size: 13px;
 }
 .timeframes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.timeframes button {
-  border: 1px solid transparent;
-  background: transparent;
-  padding: 8px;
-  font:
-    11px var(--rx-font-mono),
-    monospace;
-}
-.timeframes button:hover {
-  background: var(--rx-band);
-}
-.timeframes button[aria-pressed='true'] {
-  background: var(--rx-ink);
-  color: var(--rx-paper);
+  --segment-gap: 4px;
+  --segment-border: 1px solid transparent;
+  --segment-background: transparent;
+  --segment-padding: 8px;
+  --segment-hover-background: var(--rx-band);
+  font-family: var(--rx-font-mono), monospace;
 }
 .plot {
   position: relative;

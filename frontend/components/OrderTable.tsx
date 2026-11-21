@@ -1,5 +1,5 @@
 'use client';
-import { chains } from '@/lib/chains';
+import { chains, chainTag, chainShortName } from '@/lib/chains';
 import { amount, orderKey, short, type OrderRow } from '@/lib/model';
 import styles from './Dashboard.module.css';
 export default function OrderTable({
@@ -45,7 +45,7 @@ export default function OrderTable({
                 aria-label={`Inspect order ${row.id} on ${chains[row.chainId].name}`}
               >
                 #{String(row.id)}
-                <span>{row.chainId === 1301 ? 'UNI' : 'BASE'}</span>
+                <span>{chainTag(row.chainId)}</span>
               </button>
             </td>
             <td data-label="Owner" className="mono" title={row.owner}>
@@ -54,11 +54,9 @@ export default function OrderTable({
             <td data-label="Kind">{row.kind}</td>
             <td data-label="Trigger chain">
               <span>
-                {row.triggerChain === 1301
-                  ? 'Unichain'
-                  : row.triggerChain === 84532
-                    ? 'Base'
-                    : row.triggerChain}
+                {[1301, 84532].includes(row.triggerChain)
+                  ? chainShortName(row.triggerChain)
+                  : row.triggerChain}
               </span>
               <small>{row.triggerChain === row.chainId ? 'local' : 'remote'}</small>
             </td>

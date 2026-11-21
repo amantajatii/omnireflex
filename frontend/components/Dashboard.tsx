@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { type ChainId } from '@/lib/chains';
+import { chainShortName, type ChainId } from '@/lib/chains';
 import { orderKey } from '@/lib/model';
 import { useFeed } from '@/lib/feed';
 import Link from 'next/link';
@@ -107,7 +107,7 @@ export default function Dashboard({
                     <i
                       className={`dot ${error ? 'failed' : balance === undefined || balance === 0n ? 'pending' : 'live'}`}
                     />
-                    {id === 1301 ? 'Unichain' : id === 84532 ? 'Base' : 'Lasna'} ·{' '}
+                    {chainShortName(id)} ·{' '}
                     {error
                       ? 'unavailable'
                       : balance === undefined
@@ -164,7 +164,7 @@ export default function Dashboard({
                 {Object.entries(feed.chainLoading).map(([id, loading]) => (
                   <li key={id}>
                     <i className={`dot ${loading ? 'pending' : 'live'}`} />
-                    {id === '1301' ? 'Unichain' : id === '84532' ? 'Base' : 'Lasna'} ·{' '}
+                    {chainShortName(id)} ·{' '}
                     {loading ? 'syncing' : 'settled'}
                   </li>
                 ))}

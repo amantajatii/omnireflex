@@ -9,3 +9,5 @@ await import('./check-market');
 await import('./check-candles');
 await import('../lib/trading-chart.test');
 await import('../components/NewOrderState.test');
+
+await import('./check-polled');

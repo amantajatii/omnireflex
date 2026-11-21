@@ -129,15 +129,17 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     window.addEventListener('reflex:refresh', refresh);
     void history();
     void system();
-    const poll = setInterval(() => {
-      void history();
-      void system();
-    }, 15000);
+    const visibleRefresh = () => {
+      if (document.visibilityState !== 'hidden') refresh();
+    };
+    document.addEventListener('visibilitychange', visibleRefresh);
+    const poll = setInterval(visibleRefresh, 15000);
     const clock = setInterval(() => {
       if (active) setFeed((f) => ({ ...f, now: Date.now() }));
     }, 1000);
     return () => {
       window.removeEventListener('reflex:refresh', refresh);
+      document.removeEventListener('visibilitychange', visibleRefresh);
       active = false;
       controller.abort();
       clearInterval(poll);

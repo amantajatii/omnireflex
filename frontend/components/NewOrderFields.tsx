@@ -3,6 +3,7 @@ import { formatEther } from 'viem';
 import { formatAmount, formatPrice } from '@/lib/format';
 import { chains, destinationIds, type DestinationId } from '@/lib/chains';
 import Select from './Select';
+import Segmented from './Segmented';
 import styles from './NewOrder.module.css';
 type Props = {
   execution: DestinationId;
@@ -211,16 +212,12 @@ export default function NewOrderFields({
         <fieldset>
           <legend>Slippage</legend>
           <div className={styles.chips}>
-            {['0.5', '1', '5'].map((n) => (
-              <button
-                type="button"
-                key={n}
-                aria-pressed={slippage === n}
-                onClick={() => setSlippage(n)}
-              >
-                {n}%
-              </button>
-            ))}
+            <Segmented
+              label="Slippage presets"
+              value={slippage}
+              options={['0.5', '1', '5'].map((value) => ({ value, label: `${value}%` }))}
+              onChange={setSlippage}
+            />
             <input
               className={styles.customSlippage}
               aria-label="Custom slippage (%)"
@@ -232,13 +229,15 @@ export default function NewOrderFields({
         </fieldset>
         <fieldset>
           <legend>Expiry</legend>
-          <div className={styles.chips}>
-            {[1, 24, 168].map((n) => (
-              <button type="button" key={n} aria-pressed={hours === n} onClick={() => setHours(n)}>
-                {n === 168 ? '7 d' : `${n} h`}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Expiry presets"
+            value={hours}
+            options={[1, 24, 168].map((value) => ({
+              value,
+              label: value === 168 ? '7 d' : `${value} h`,
+            }))}
+            onChange={setHours}
+          />
         </fieldset>
       </div>
     </>
