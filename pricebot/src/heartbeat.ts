@@ -6,7 +6,8 @@ import type { Config } from './config.ts';
 import type { DestRecord } from './records.ts';
 import type { createTransactions } from './transactions.ts';
 
-export const LOG_CHUNK = 1000n;
+export const ORDER_SCAN_LIMIT = 500n;
+const ORDER_READ_BATCH = 10;
 const HEARTBEAT_RETRY_MS = 10 * 60_000;
 
 /** True when the price follower will not swap this step (same threshold as decide()). */
@@ -44,31 +45,56 @@ export function heartbeatOrder(rec: DestRecord, cfg: Config, sqrtPrice: bigint, 
       lowerTick: t - distance, upperTick: t + distance, trailTicks: 0 } };
 }
 
-export async function scanOrders(client: PublicClient, executor: Address, owner: Address, lookbackSeconds: bigint) {
-  const head = await client.getBlock();
-  const cutoff = head.timestamp > lookbackSeconds ? head.timestamp - lookbackSeconds : 0n;
-  let low = 0n, high = head.number;
-  while (low < high) {
-    const mid = (low + high) / 2n;
-    const block = await client.getBlock({ blockNumber: mid });
-    if (block.timestamp < cutoff) low = mid + 1n;
-    else high = mid;
+export type ScannedOrder = { id: bigint; status: number; expiry: bigint; fee: bigint; refundableAt: bigint };
+
+export async function scanOrders(client: PublicClient, executor: Address, owner: Address,
+  sinceId = 0n, tracked: Iterable<bigint> = []) {
+  const [head, next] = await Promise.all([
+    client.getBlock(),
+    client.readContract({ address: executor, abi: executorAbi, functionName: 'nextOrderId' }) as Promise<bigint>,
+  ]);
+  const latestId = next > 1n ? next - 1n : 0n;
+  if (latestId === 0n) {
+    return { orders: [] as ScannedOrder[], now: head.timestamp, scannedUpTo: 0n, nextTracked: new Set<bigint>() };
   }
-  const ids = new Set<bigint>();
-  for (let from = low; from <= head.number; from += LOG_CHUNK) {
-    const to = from + LOG_CHUNK - 1n;
-    const logs = await client.getContractEvents({ address: executor, abi: executorAbi,
-      eventName: 'OrderCreated', args: { owner }, fromBlock: from,
-      toBlock: to < head.number ? to : head.number, strict: true });
-    for (const event of logs) ids.add(event.args.orderId);
+  const startId = sinceId > 0n
+    ? sinceId + 1n
+    : (latestId >= ORDER_SCAN_LIMIT ? latestId - ORDER_SCAN_LIMIT + 1n : 1n);
+  const idSet = new Set<bigint>();
+  for (const id of tracked) if (id >= 1n && id <= latestId) idSet.add(id);
+  for (let id = startId; id <= latestId; id++) idSet.add(id);
+  const ids = [...idSet].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const ownerLower = owner.toLowerCase();
+  const orders: ScannedOrder[] = [];
+  const nextTracked = new Set<bigint>();
+  for (let i = 0; i < ids.length; i += ORDER_READ_BATCH) {
+    const batch = ids.slice(i, i + ORDER_READ_BATCH);
+    const loaded = await Promise.all(batch.map(id =>
+      client.readContract({ address: executor, abi: executorAbi, functionName: 'getOrder', args: [id] }) as Promise<{
+        owner: Address; status: number; params: { expiry: bigint };
+      }>));
+    for (let j = 0; j < batch.length; j++) {
+      const id = batch[j], order = loaded[j];
+      if (order.owner.toLowerCase() !== ownerLower) continue;
+      const fee = order.status === 3
+        ? await client.readContract({ address: executor, abi: executorAbi, functionName: 'orderFee', args: [id] }) as bigint
+        : 0n;
+      const refundableAt = fee > 0n
+        ? await client.readContract({ address: executor, abi: executorAbi, functionName: 'refundableAt', args: [id] }) as bigint
+        : 0n;
+      orders.push({ id, status: order.status, expiry: order.params.expiry, fee, refundableAt });
+      if (order.status === 1 || (order.status === 3 && fee > 0n)) nextTracked.add(id);
+    }
   }
-  return { ids: [...ids], now: head.timestamp };
+  return { orders, now: head.timestamp, scannedUpTo: latestId, nextTracked };
 }
 
 export function createHeartbeat(client: PublicClient, tx: ReturnType<typeof createTransactions> | undefined,
   rec: DestRecord, cfg: Config, owner: Address | undefined, health: ReturnType<typeof newHeartbeatHealth>,
   paused: () => boolean, signal: AbortSignal) {
   let nextCycle = 0;
+  let scannedUpTo = 0n;
+  let tracked = new Set<bigint>();
   return async (reference: number | null) => {
     if (!cfg.heartbeatEnabled || !cfg.heartbeatChains.includes(rec.chainId) || signal.aborted) return;
     if (Date.now() < nextCycle) return;
@@ -89,8 +115,6 @@ export function createHeartbeat(client: PublicClient, tx: ReturnType<typeof crea
       }
       nextCycle = Date.now() + cfg.heartbeatIntervalMs;
       if (!tx || !owner) throw new Error('heartbeat wallet unavailable');
-      const read = (functionName: 'getOrder' | 'orderFee' | 'refundableAt', id: bigint) =>
-        client.readContract({ address: rec.executor, abi: executorAbi, functionName, args: [id] });
       async function send(functionName: 'reclaimExpired' | 'claimFeeRefund' | 'createOrder', args: any[],
         value = 0n, onReceipt?: Parameters<ReturnType<typeof createTransactions>['send']>[1]) {
         if (signal.aborted || paused()) throw new Error('heartbeat stopped');
@@ -100,19 +124,19 @@ export function createHeartbeat(client: PublicClient, tx: ReturnType<typeof crea
           abi: executorAbi, functionName, args: args as any, value, gasPrice });
         await tx!.send(request, onReceipt);
       }
-      // Covers creation, next-cycle reclaim, following-cycle refund, plus a downtime margin.
-      const lookback = BigInt(Math.ceil((2 * cfg.heartbeatIntervalMs + cfg.heartbeatTtlMs) / 1000) + 180 + 3600);
-      const { ids, now } = await scanOrders(client, rec.executor, owner, lookback);
+      const scan = await scanOrders(client, rec.executor, owner, scannedUpTo, tracked);
+      scannedUpTo = scan.scannedUpTo;
+      tracked = scan.nextTracked;
       let active = false;
-      for (const id of ids) {
-        const order = await read('getOrder', id) as { owner: Address; status: number; params: { expiry: bigint } };
-        if (order.owner.toLowerCase() !== owner.toLowerCase()) throw new Error('heartbeat order owner mismatch');
-        const fee = order.status === 3 ? await read('orderFee', id) as bigint : 0n;
-        const refundableAt = fee > 0n ? await read('refundableAt', id) as bigint : 0n;
-        const action = heartbeatAction(order.status, order.params.expiry, now, fee, refundableAt);
+      for (const order of scan.orders) {
+        const action = heartbeatAction(order.status, order.expiry, scan.now, order.fee, order.refundableAt);
         if (action === 'skip') active = true;
-        if (action === 'reclaim') { await send('reclaimExpired', [id]); result(`reclaimed ${id}`); }
-        if (action === 'claim') { await send('claimFeeRefund', [id]); result(`refunded ${id}`); }
+        if (action === 'reclaim') { await send('reclaimExpired', [order.id]); result(`reclaimed ${order.id}`); }
+        if (action === 'claim') {
+          await send('claimFeeRefund', [order.id]);
+          tracked.delete(order.id);
+          result(`refunded ${order.id}`);
+        }
       }
       if (active) { result('active order found; skipped creation'); health.lastError = null; return; }
       const word = await client.readContract({ address: rec.poolManager, abi: poolAbi,

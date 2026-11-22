@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { encodeAbiParameters, encodeEventTopics, maxUint256 } from 'viem';
 import { loadConfig } from '../src/config.ts';
 import { loadDestRecord } from '../src/records.ts';
-import { createHeartbeat, isPoolAligned, heartbeatAction, heartbeatOrder, LOG_CHUNK, newHeartbeatHealth, scanOrders } from '../src/heartbeat.ts';
+import { createHeartbeat, isPoolAligned, heartbeatAction, heartbeatOrder, ORDER_SCAN_LIMIT, newHeartbeatHealth, scanOrders } from '../src/heartbeat.ts';
 import { executorAbi } from '../src/abi.ts';
 import { priceToSqrtPriceX96 } from '../src/math.ts';
 import { createTransactions } from '../src/transactions.ts';
@@ -65,25 +65,44 @@ test('heartbeat decisions respect strict expiry and inclusive refund timestamps'
   assert.equal(heartbeatAction(0, 0n, now), 'create');
 });
 
-test('timestamp lookback and log chunks cover exact range with owner filter', async () => {
-  const ranges: [bigint, bigint][] = [];
+test('state scan bounds cold start, filters owner, and tracks only non-terminal orders', async () => {
+  const other = rec.rdUSD;
+  const readIds: bigint[] = [];
+  const nextId = ORDER_SCAN_LIMIT + 5n;
   const client = {
-    getBlock: async ({ blockNumber = 3500n } = {}) => ({ number: blockNumber, timestamp: blockNumber * 2n }),
-    getContractEvents: async (args: any) => {
-      assert.equal(args.args.owner, owner);
-      assert.equal(args.address, rec.executor);
-      assert.equal(args.eventName, 'OrderCreated');
-      assert.ok(BigInt(args.toBlock) - BigInt(args.fromBlock) + 1n <= LOG_CHUNK);
-      ranges.push([args.fromBlock, args.toBlock]);
-      return [{ args: { orderId: 1n } }];
+    getBlock: async () => ({ number: 3500n, timestamp: 7000n }),
+    readContract: async ({ functionName, args }: any) => {
+      if (functionName === 'nextOrderId') return nextId;
+      if (functionName === 'getOrder') {
+        const id = args[0] as bigint;
+        readIds.push(id);
+        if (id === nextId - 3n) return { owner: other, status: 1, params: { expiry: 8000n } };
+        if (id === nextId - 2n) return { owner, status: 2, params: { expiry: 8000n } };
+        if (id === nextId - 1n) return { owner, status: 3, params: { expiry: 6000n } };
+        return { owner: other, status: 2, params: { expiry: 0n } };
+      }
+      if (functionName === 'orderFee') return 200n;
+      if (functionName === 'refundableAt') return 7000n;
+      assert.fail(functionName);
     },
   };
-  const result = await scanOrders(client as any, rec.executor, owner, 5000n);
-  assert.deepEqual(ranges, [[1000n, 1999n], [2000n, 2999n], [3000n, 3500n]]);
-  assert.deepEqual(result, { ids: [1n], now: 7000n });
+  const cold = await scanOrders(client as any, rec.executor, owner);
+  assert.equal(readIds.length, Number(ORDER_SCAN_LIMIT));
+  assert.equal(readIds[0], 5n);
+  assert.equal(readIds[readIds.length - 1], nextId - 1n);
+  assert.equal(cold.now, 7000n);
+  assert.equal(cold.scannedUpTo, nextId - 1n);
+  assert.deepEqual([...cold.nextTracked], [nextId - 1n]);
+  assert.deepEqual(cold.orders.map(o => o.id), [nextId - 2n, nextId - 1n]);
+
+  // Subsequent scan only re-reads tracked non-terminal orders and newly created IDs.
+  readIds.length = 0;
+  const incremental = await scanOrders(client as any, rec.executor, owner, cold.scannedUpTo, cold.nextTracked);
+  assert.deepEqual(readIds, [nextId - 1n]);
+  assert.deepEqual(incremental.orders.map(o => o.id), [nextId - 1n]);
 });
 
-function harness(orders: { status: number; expiry: bigint; fee?: bigint; refund?: bigint }[] = [],
+function harness(orders: { owner?: string; status: number; expiry: bigint; fee?: bigint; refund?: bigint }[] = [],
   changes = {}, paused = () => false) {
   const health = newHeartbeatHealth();
   const abort = new AbortController();
@@ -93,14 +112,14 @@ function harness(orders: { status: number; expiry: bigint; fee?: bigint; refund?
   const client = {
     getGasPrice: async () => gas,
     getBlock: async ({ blockNumber = 10n } = {}) => ({ number: blockNumber, timestamp: now - 10n + blockNumber }),
-    getContractEvents: async () => {
-      if (failScan) throw new Error('scan offline');
-      return orders.map((_, i) => ({ args: { orderId: BigInt(i + 1) } }));
-    },
     readContract: async ({ functionName, args }: any) => {
+      if (functionName === 'nextOrderId') {
+        if (failScan) throw new Error('scan offline');
+        return BigInt(orders.length + 1);
+      }
       calls.push(functionName);
       const order = orders[Number(args?.[0]) - 1];
-      if (functionName === 'getOrder') return { owner, status: order.status, params: { expiry: order.expiry } };
+      if (functionName === 'getOrder') return { owner: order.owner ?? owner, status: order.status, params: { expiry: order.expiry } };
       if (functionName === 'orderFee') return order.fee ?? 0n;
       if (functionName === 'refundableAt') return order.refund ?? 0n;
       if (functionName === 'allowance') return 0n;
@@ -267,4 +286,12 @@ test('lagging pool or missing reference defers creation so our own swap cannot f
     await h.cycle(2000);
     assert.equal(h.calls.length, before, 'retry waits for the short delay');
   }
+});
+
+test('other users active orders do not block heartbeat creation', async () => {
+  const h = harness([{ owner: rec.rdUSD, status: 1, expiry: now + 100n }]);
+  await h.cycle();
+  assert.equal(h.health.lastError, null);
+  assert.equal(h.health.lastOrderId, '99');
+  assert.deepEqual(h.calls.filter(c => c.startsWith('send:')), ['send:approve', 'send:createOrder']);
 });

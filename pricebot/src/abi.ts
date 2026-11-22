@@ -16,6 +16,7 @@ export const executorAbi = parseAbi([
   'struct OrderParams { PoolKey poolKey; bool zeroForOne; uint128 amountIn; uint128 minAmountOut; uint64 expiry; TriggerParams trigger; }',
   'struct Order { address owner; uint8 status; OrderParams params; }',
   'event OrderCreated(uint64 indexed orderId, address indexed owner, TriggerParams trigger, uint64 expiry)',
+  'function nextOrderId() view returns (uint64)',
   'function getOrder(uint64 orderId) view returns (Order)',
   'function orderFee(uint64 orderId) view returns (uint256)',
   'function refundableAt(uint64 orderId) view returns (uint256)',
