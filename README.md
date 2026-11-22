@@ -5,6 +5,7 @@ Keeper-free stop-loss, take-profit, bracket (OCO), and trailing-stop orders for 
 Submitted to the **Reactive Omni Buildathon**, track **Every Second Counts**.
 
 - **Live dApp:** https://omnireflex.amantajati.studio
+- **Demo video:** https://youtu.be/oGMPZSbAnjI
 - **Latency Indexer:** https://omnireflex-indexer.amantajati.studio/health
 
 ## Why Reactive Omni
@@ -52,10 +53,23 @@ First live end-to-end execution (1 rdETH sold for ~2,903.06 rdUSD, +2 blocks / ~
 | T2: `OrderExecuted` callback   | Unichain Sepolia | `68167338` | [`0xa0bf538c3695fd1bc1ac369f522490b6d83ca5cefe21af3f661f7c232d0c2710`](https://sepolia.uniscan.xyz/tx/0xa0bf538c3695fd1bc1ac369f522490b6d83ca5cefe21af3f661f7c232d0c2710) |
 | Mirror settled (`OrderClosed`) | Reactive Lasna   | `8665846`  | [`0xedb5e9f37def80d51fc0cd89a72ddbdda4fbf918d36f585c4533db0d4737ba80`](https://lasna.reactscan.net/tx/0xedb5e9f37def80d51fc0cd89a72ddbdda4fbf918d36f585c4533db0d4737ba80) |
 
+### Always-on demo loop (heartbeat orders)
+
+So judges always find a fresh loop to inspect, the price bot places a small heartbeat bracket (0.01 rdETH, ±0.2 % around the pool price, 5 h expiry) on Unichain Sepolia every 6 hours. Its own next price-following swap crosses the bracket, and `ReflexReactive` executes it like any user order. Expired heartbeats are reclaimed and their execution fee refunded automatically. Heartbeat order #3, executed on 2026-11-22:
+
+| Stage                       | Chain            | Block      | Transaction Hash |
+| --------------------------- | ---------------- | ---------- | ---------------- |
+| T0: Origin `Swap`           | Unichain Sepolia | `68468861` | [`0xa2304f1c…a8e772`](https://sepolia.uniscan.xyz/tx/0xa2304f1c66bbbb71730d82b2d2e232da3cdb06374cff688ae8590b2689a8e772) |
+| T1: `OrderTriggered`        | Reactive Lasna   | `8946526`  | [`0xdfe13f7d…ee9aea`](https://lasna.reactscan.net/tx/0xdfe13f7dae757419ac40feb4c5867cc91b5bab86ca1ddbf350f95eb12bee9aea) |
+| T2: `OrderExecuted`         | Unichain Sepolia | `68468863` | [`0x8f0fb9d2…f101ec`](https://sepolia.uniscan.xyz/tx/0x8f0fb9d21fac3b8dabb0d873e9451c0c8fb597ac17ade81fb148d487eff101ec) |
+| Mirror settled (`OrderClosed`) | Reactive Lasna | `8946528`  | [`0x94fd8e20…243a93`](https://lasna.reactscan.net/tx/0x94fd8e20038f977d3b5b0553046a1982dc77e1396c0f43d47c86c67ef9243a93) |
+
+Swap to execution: 2 Unichain blocks (~2 s). Lasna's block timestamp reads one second before the swap; block clocks across chains can skew by about 1 s.
+
 Every callback carries an on-chain `ExecutionTrace` (`originChainId`, `originBlockNumber`, `originTxHash`, `originLogIndex`, `tick`), allowing deterministic three-stage joining without heuristics:
 
 1. **On-chain block timestamps:** Always available in the dashboard and landing stats, labeled as `block time`.
-2. **Millisecond observer (`indexer/`):** Polls all three chains live and records wall-clock `Date.now()` arrival times (`swapSeenMs`, `triggeredSeenMs`, `executedSeenMs`), surfaced in `/app` Overview and order detail timelines as `ms · indexer`.
+2. **Millisecond observer (`indexer/`):** Polls all three chains live and records wall-clock `Date.now()` arrival times (`swapSeenMs`, `triggeredSeenMs`, `executedSeenMs`), surfaced in `/app` Overview and order detail timelines as `ms · indexer` when the three stages were observed in order (a single poll that catches all three falls back to block time).
 
 ## Repository layout
 
