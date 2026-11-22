@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createPollStore, type PollEnvironment } from '../lib/poll-store';
 import { chainShortName, chainTag } from '../lib/chains';
+import { plausibleTimings } from '../lib/indexer';
 
 let hidden = false;
 const ticks = new Set<() => void>();
@@ -129,6 +130,16 @@ for (const [id, name, tag] of [
 }
 assert.equal(chainShortName(999), 'Chain 999');
 assert.equal(chainTag(999), '999');
+// Indexer arrival times: only in-order samples count as millisecond latency.
+assert.equal(plausibleTimings([1000, 1400, 2100]), true);
+assert.equal(plausibleTimings([1000, null, 2100]), true);
+assert.equal(plausibleTimings([1842, 1825, 1842]), false); // one poll saw all three stages
+assert.equal(plausibleTimings([1000, 1400, 1000]), false);
+assert.equal(plausibleTimings([1000, 2500, 2100]), false);
+assert.equal(plausibleTimings([null, 1400, 2100]), false);
+process.stdout.write(
+  'PASS indexer timing plausibility\n',
+);
 process.stdout.write(
   'PASS polling dedupe, single interval, visibility pause/resume, refresh, cache, stale errors, abort and cleanup; chain metadata\n',
 );
