@@ -191,12 +191,7 @@
   margin: 0 0 0 252px;
   padding: 24px;
   width: calc(100% - 252px);
-  max-width: 1500px;
   min-width: 0;
-}
-/* The trading terminal uses the full width on large screens. */
-.shell .content.wide {
-  max-width: none;
 }
 .content :global(.panel) {
   padding: 32px;

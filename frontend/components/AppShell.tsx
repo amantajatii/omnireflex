@@ -135,7 +135,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       >
         <Rail close={() => setOpen(false)} />
       </dialog>
-      <main id="main" className={`${styles.content} ${path === '/app/new' ? styles.wide : ''}`}>
+      <main id="main" className={styles.content}>
         {children}
       </main>
     </div>
